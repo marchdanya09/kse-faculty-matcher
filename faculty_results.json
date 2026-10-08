@@ -1,0 +1,313 @@
+[
+  {
+    "input_name": "Viacheslav Priamitsyn",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100%)"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0001-7042-9783",
+      "orcid_url": "https://orcid.org/0000-0001-7042-9783",
+      "name_in_orcid": "Вячеслав Пряміцин",
+      "other_names": [],
+      "institutions": [],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "qWF2GsIAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=qWF2GsIAAAAJ&hl=en&oi=ao",
+      "name": "Viacheslav Priamitsyn",
+      "affiliations": "Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 62,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Sergiy Kozerenko",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100%)"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-5716-3084",
+      "orcid_url": "https://orcid.org/0000-0002-5716-3084",
+      "name_in_orcid": "Sergiy Kozerenko",
+      "other_names": [],
+      "institutions": [
+        "Kyiv Mathematical Society",
+        "Kyiv School of Economics",
+        "National University of Kyiv Mohyla Academy",
+        "National University of Kyiv-Mohyla Academy",
+        "Students' Mathematical Seminar"
+      ],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "_lmN4FkAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=_lmN4FkAAAAJ&hl=en&oi=ao",
+      "name": "Sergiy Kozerenko",
+      "affiliations": "Computer Science Department, Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 127,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Volodymyr Viedienieiev",
+    "status": "PARTIAL MATCH (NEEDS REVIEW)",
+    "confidence_score": 45,
+    "reasons": [
+      "ORCID confirmed"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0001-9549-3087",
+      "orcid_url": "https://orcid.org/0000-0001-9549-3087",
+      "name_in_orcid": "Volodymyr Viedienieiev",
+      "other_names": [],
+      "institutions": [
+        "Kyiv National Economic University"
+      ],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": null,
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Kateryna Antoshyna",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100.0%)"
+    ],
+    "orcid": {
+      "orcid_id": "0009-0008-0933-6893",
+      "orcid_url": "https://orcid.org/0009-0008-0933-6893",
+      "name_in_orcid": "Kateryna Antoshyna",
+      "other_names": [],
+      "institutions": [
+        "Institute of Mathematics"
+      ],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "FYN91ucAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=FYN91ucAAAAJ&hl=en&oi=ao",
+      "name": "Kateryna Antoshyna",
+      "affiliations": "Ph.D. student, Institute of Mathematics NAS of Ukraine",
+      "email_verification": "Verified email at imath.kiev.ua",
+      "cited_by": 3,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100.0
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Mariia Kriuchok",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100%)"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-4126-3283",
+      "orcid_url": "https://orcid.org/0000-0002-4126-3283",
+      "name_in_orcid": "Mariia Kriuchok",
+      "other_names": [],
+      "institutions": [
+        "Kyiv School of Economics",
+        "The London School of Economics and Political Science"
+      ],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "7ZmNnzIAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=7ZmNnzIAAAAJ&hl=en&oi=ao",
+      "name": "Mariia Kriuchok",
+      "affiliations": "Senior Lecturer, Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 68,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Oleksandra Konopatska",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100%)"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0003-1867-9894",
+      "orcid_url": "https://orcid.org/0000-0003-1867-9894",
+      "name_in_orcid": "Oleksandra Konopatska",
+      "other_names": [],
+      "institutions": [
+        "Kyiv School of Economics",
+        "National Technical University of Ukraine “Igor Sikorsky Kyiv Polytechnic Institute”",
+        "Ukrainian Catholic University"
+      ],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "W82UtxcAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=W82UtxcAAAAJ&hl=en&oi=ao",
+      "name": "Oleksandra Konopatska",
+      "affiliations": "Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 21,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Милованов Тимофій Сергійович",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100%)"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-1448-0020",
+      "orcid_url": "https://orcid.org/0000-0002-1448-0020",
+      "name_in_orcid": "Tymofiy Mylovanov",
+      "other_names": [],
+      "institutions": [],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "yc93y5UAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=yc93y5UAAAAJ&hl=en&oi=ao",
+      "name": "Tymofiy Mylovanov",
+      "affiliations": "Kyiv School of Economics",
+      "email_verification": "Verified email at pitt.edu",
+      "cited_by": 1996,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Прокопович Павло",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100%)"
+    ],
+    "orcid": {
+      "orcid_id": "0009-0003-8007-7680",
+      "orcid_url": "https://orcid.org/0009-0003-8007-7680",
+      "name_in_orcid": "Pavlo Prokopovych",
+      "other_names": [
+        "Прокопович Павло Ігорович"
+      ],
+      "institutions": [],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "vyNW0xgAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=vyNW0xgAAAAJ&hl=en&oi=ao",
+      "name": "Pavlo Prokopovych",
+      "affiliations": "Professor of Economics, Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 456,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  },
+  {
+    "input_name": "Вахітова Ганна Миколаївна",
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 85,
+    "reasons": [
+      "ORCID confirmed",
+      "Scholar profile matched (100%)"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-5138-0838",
+      "orcid_url": "https://orcid.org/0000-0002-5138-0838",
+      "name_in_orcid": "Hanna Vakhitova",
+      "other_names": [],
+      "institutions": [
+        "Kyiv School of Economics",
+        "SDU",
+        "Syddansk Universitet Det Samfundsvidenskabelige Fakultet",
+        "University of Kentucky"
+      ],
+      "source": "ORCID API (Direct search)"
+    },
+    "scholar": {
+      "scholar_id": "kkuux7IAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=kkuux7IAAAAJ&hl=en&oi=ao",
+      "name": "Hanna Vakhitova",
+      "affiliations": "Professor of Economics, Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 251,
+      "source": "SerpAPI (Google Scholar Engine)",
+      "match_score": 100
+    },
+    "metrics": {
+      "h_index": 0,
+      "citations": 0,
+      "works_count": 0
+    },
+    "sample_works": []
+  }
+]
