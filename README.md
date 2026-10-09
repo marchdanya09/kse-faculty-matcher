@@ -44,19 +44,43 @@ Automated, cost-effective pipeline for discovering, disambiguating, and validati
 
 ---
 
-## 📖 Usage
+## 📖 CLI Usage
 
-### Run the standard pipeline:
+The pipeline supports direct command-line execution with fuzzy matching across **Ukrainian**, **English**, and **Russian** names:
+
+### 1. Single Faculty Lookup:
 ```bash
-python faculty_matcher.py
+# In Ukrainian:
+python faculty_matcher.py "Тимофій Брік"
+
+# In English:
+python faculty_matcher.py "Sergiy Kozerenko"
+
+# In Russian:
+python faculty_matcher.py "Сергей Козеренко"
 ```
-Output results will be written to `faculty_results.json`.
 
-### Run the batch benchmark:
+### 2. Output Pure JSON to stdout (Scripting & Piping):
 ```bash
+python faculty_matcher.py "Тимофій Брік" --json
+```
+
+### 3. Multiple Names & Save to File:
+```bash
+python faculty_matcher.py "Maksym Obrizan" "Павло Прокопович" -o results.json
+```
+
+### 4. Process Batch from File (One name per line or JSON array):
+```bash
+python faculty_matcher.py --file faculty_list.txt -o results.json
+```
+
+### 5. Run Default Benchmark Suite:
+```bash
+python faculty_matcher.py --benchmark
+# Or run the batch 2 benchmark:
 python test_new_faculty.py
 ```
-Output results will be written to `faculty_results_batch2.json`.
 
 ---
 

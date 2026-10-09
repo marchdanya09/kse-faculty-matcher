@@ -1,6 +1,8 @@
+import argparse
 import json
 import os
 import re
+import sys
 import time
 import urllib.parse
 import urllib.request
@@ -31,7 +33,7 @@ PARTNER_INSTITUTION_KEYWORDS = [
 ]
 
 # ==============================================================================
-# 1. TRANSLITERATION & UKRAINIAN NAME PARSING
+# 1. TRANSLITERATION & MULTILINGUAL NAME PARSING (UKR / ENG / RUS)
 # ==============================================================================
 UKR_TRANSLIT_INITIAL = {
     'Є': 'Ye', 'Ї': 'Yi', 'Й': 'Y', 'Ю': 'Yu', 'Я': 'Ya',
@@ -46,7 +48,69 @@ UKR_TRANSLIT_MEDIAL = {
     'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'i', 'й': 'i', 'к': 'k', 'л': 'l',
     'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
     'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ю': 'iu', 'я': 'ia',
+    'ы': 'y', 'Ы': 'Y', 'э': 'e', 'Э': 'E', 'ё': 'io', 'Ё': 'Io', 'ъ': '', 'Ъ': '',
     'ь': '', '\'': '', '’': '', 'ʼ': '', '`': ''
+}
+
+RU_TRANSLIT_INITIAL = {
+    'Е': 'Ye', 'Ё': 'Yo', 'Ю': 'Yu', 'Я': 'Ya',
+    'е': 'ye', 'ё': 'yo', 'ю': 'yu', 'я': 'ya'
+}
+RU_TRANSLIT_MEDIAL = {
+    'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo',
+    'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M',
+    'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+    'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch',
+    'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya',
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+    'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+    'і': 'i', 'І': 'I', 'ї': 'i', 'Ї': 'I', 'є': 'ye', 'Є': 'Ye', 'ґ': 'g', 'Ґ': 'G'
+}
+
+CROSS_LANG_NAME_PAIRS = {
+    'сергей': 'сергій', 'сергій': 'сергей',
+    'тимофей': 'тимофій', 'тимофій': 'тимофей',
+    'вячеслав': "в'ячеслав", "в'ячеслав": 'вячеслав',
+    'павел': 'павло', 'павло': 'павел',
+    'анна': 'ганна', 'ганна': 'анна',
+    'владимир': 'володимир', 'володимир': 'владимир',
+    'игорь': 'ігор', 'ігор': 'игорь',
+    'иван': 'іван', 'іван': 'иван',
+    'екатерина': 'катерина', 'катерина': 'екатерина',
+    'татьяна': 'тетяна', 'тетяна': 'татьяна',
+    'юрий': 'юрій', 'юрій': 'юрий',
+    'елена': 'олена', 'олена': 'елена',
+    'роман': 'роман',
+    'александр': 'олександр', 'олександр': 'александр',
+    'алексей': 'олексій', 'олексій': 'алексей',
+    'дмитрий': 'дмитро', 'дмитро': 'дмитрий',
+    'михаил': 'михайло', 'михайло': 'михаил',
+    'андрей': 'андрій', 'андрій': 'андрей',
+    'наталья': 'наталія', 'наталия': 'наталія', 'наталія': 'наталья',
+    'мария': 'марія', 'марія': 'мария',
+    'виктор': 'віктор', 'віктор': 'виктор',
+    'евгений': 'євген', 'євген': 'евгений', 'євгеній': 'евгений',
+    'григорий': 'григорій', 'григорій': 'григорий'
+}
+
+LATIN_TO_CYR_NAMES = {
+    'tymofii': ['Тимофій', 'Тимофей'], 'tymofiy': ['Тимофій', 'Тимофей'], 'timofey': ['Тимофій', 'Тимофей'],
+    'sergiy': ['Сергій', 'Сергей'], 'serhii': ['Сергій', 'Сергей'], 'sergey': ['Сергій', 'Сергей'],
+    'igor': ['Ігор', 'Игорь'], 'ihor': ['Ігор', 'Игорь'],
+    'ivan': ['Іван', 'Иван'],
+    'pavlo': ['Павло', 'Павел'], 'pavel': ['Павло', 'Павел'],
+    'volodymyr': ['Володимир', 'Владимир'], 'vladimir': ['Володимир', 'Владимир'],
+    'maksym': ['Максим'], 'maxim': ['Максим'],
+    'kateryna': ['Катерина', 'Екатерина'], 'ekaterina': ['Катерина', 'Екатерина'],
+    'mariia': ['Марія', 'Мария'], 'mariya': ['Марія', 'Мария'], 'maria': ['Марія', 'Мария'],
+    'ganna': ['Ганна', 'Анна'], 'hanna': ['Ганна', 'Анна'], 'anna': ['Ганна', 'Анна'],
+    'olena': ['Олена', 'Елена'], 'elena': ['Олена', 'Елена'],
+    'tetiana': ['Тетяна', 'Татьяна'], 'tatyana': ['Тетяна', 'Татьяна'],
+    'viacheslav': ["В'ячеслав", "Вячеслав"], 'vyacheslav': ["В'ячеслав", "Вячеслав"],
+    'yurii': ['Юрій', 'Юрий'], 'yuriy': ['Юрій', 'Юрий'], 'yury': ['Юрій', 'Юрий']
 }
 
 PATRONYMIC_ENDINGS = ('ович', 'евич', 'євич', 'івна', 'ївна', 'овна', 'евна')
@@ -65,8 +129,22 @@ def transliterate_ukr(text: str) -> str:
         res_words.append(''.join(chars))
     return ' '.join(res_words)
 
+def transliterate_ru(text: str) -> str:
+    """Standard Russian transliteration (BGN/PCGN)."""
+    words = text.split()
+    res_words = []
+    for w in words:
+        chars = []
+        for i, ch in enumerate(w):
+            if i == 0 and ch in RU_TRANSLIT_INITIAL:
+                chars.append(RU_TRANSLIT_INITIAL[ch])
+            else:
+                chars.append(RU_TRANSLIT_MEDIAL.get(ch, ch))
+        res_words.append(''.join(chars))
+    return ' '.join(res_words)
+
 def generate_name_variants(name: str) -> List[str]:
-    """Generates structured name variants handling patronymics, apostrophes, and transliteration."""
+    """Generates structured name variants across Ukrainian, English, and Russian (CMU 2010 & BGN)."""
     clean_str = re.sub(r'[\’\ʼ\`]', "'", name.strip())
     tokens = [t for t in re.split(r'\s+', clean_str) if t]
     if not tokens:
@@ -80,58 +158,121 @@ def generate_name_variants(name: str) -> List[str]:
         elif tokens[1].lower().endswith(PATRONYMIC_ENDINGS):
             clean_tokens = [tokens[0]] + tokens[2:]
 
-    variants = set()
-    variants.add(name.strip())
+    orders = []
     if len(clean_tokens) == 2:
         t0, t1 = clean_tokens[0], clean_tokens[1]
-        orders = [f"{t0} {t1}", f"{t1} {t0}"]
+        orders.extend([f"{t0} {t1}", f"{t1} {t0}"])
+
+        # Cross-lingual Ukrainian <-> Russian first name mapping
+        for i, t in enumerate([t0, t1]):
+            low = t.lower()
+            if low in CROSS_LANG_NAME_PAIRS:
+                mapped = CROSS_LANG_NAME_PAIRS[low]
+                mapped_tc = mapped.capitalize() if t[0].isupper() else mapped
+                alt = [t0, t1]
+                alt[i] = mapped_tc
+                orders.extend([f"{alt[0]} {alt[1]}", f"{alt[1]} {alt[0]}"])
+    elif len(clean_tokens) == 1:
+        orders.append(clean_tokens[0])
+    else:
+        orders.append(' '.join(clean_tokens))
+
+    variants = set()
+    variants.add(name.strip())
+
+    has_cyrillic = any(ord(c) > 127 for c in name)
+
+    if has_cyrillic:
         for order in orders:
             variants.add(order)
-            tr = transliterate_ukr(order)
-            variants.add(tr)
-            variants.add(re.sub(r'\bH', 'G', re.sub(r'\bh', 'g', tr)))
-            # Ukrainian 'ій' is overwhelmingly written as 'iy' (Tymofiy, Sergiy, Yuriy)
-            if 'ii' in tr:
-                variants.add(tr.replace('ii', 'iy'))
-                variants.add(tr.replace('ii', 'y'))
-            if 'iy' in tr:
-                variants.add(tr.replace('iy', 'ii'))
-                variants.add(tr.replace('iy', 'y'))
-            # Generate common 'iy' for first names like Tymofiy
-            tr_iy = re.sub(r'ii\b', 'iy', tr)
+            # Ukrainian CMU 2010 transliteration
+            tr_u = transliterate_ukr(order)
+            variants.add(tr_u)
+            variants.add(re.sub(r'\bH', 'G', re.sub(r'\bh', 'g', tr_u)))
+            if 'ii' in tr_u:
+                variants.add(tr_u.replace('ii', 'iy'))
+                variants.add(tr_u.replace('ii', 'y'))
+            if 'iy' in tr_u:
+                variants.add(tr_u.replace('iy', 'ii'))
+                variants.add(tr_u.replace('iy', 'y'))
+            tr_iy = re.sub(r'ii\b', 'iy', tr_u)
             variants.add(tr_iy)
-    elif len(clean_tokens) == 1:
-        variants.add(transliterate_ukr(clean_tokens[0]))
 
-    # Common mapping for prominent Latin spellings in KSE rosters
+            # Russian BGN transliteration
+            tr_r = transliterate_ru(order)
+            variants.add(tr_r)
+    else:
+        # Latin input: generate swapped orders & check for known Cyrillic mappings
+        for order in orders:
+            variants.add(order)
+            if 'ii' in order:
+                variants.add(order.replace('ii', 'iy'))
+            if 'iy' in order:
+                variants.add(order.replace('iy', 'ii'))
+
+        if len(clean_tokens) == 2:
+            t0_low = clean_tokens[0].lower()
+            t1_low = clean_tokens[1].lower()
+            if t0_low in LATIN_TO_CYR_NAMES:
+                for cyr_fn in LATIN_TO_CYR_NAMES[t0_low]:
+                    variants.add(f"{cyr_fn} {clean_tokens[1]}")
+            if t1_low in LATIN_TO_CYR_NAMES:
+                for cyr_fn in LATIN_TO_CYR_NAMES[t1_low]:
+                    variants.add(f"{cyr_fn} {clean_tokens[0]}")
+
+    # Specific historical roster aliases
     v_lower = name.lower()
-    if 'priamitsyn' in v_lower or 'pryamitsyn' in v_lower:
+    if 'priamitsyn' in v_lower or 'pryamitsyn' in v_lower or 'прямицын' in v_lower or 'пряміцин' in v_lower:
         variants.add('Вячеслав Пряміцин')
         variants.add('Пряміцин Вячеслав')
+        variants.add('Вячеслав Прямицын')
         variants.add('Viacheslav Priamitsyn')
         variants.add('Viacheslav Pryamitsyn')
-    elif 'kriuchok' in v_lower:
+    elif 'kriuchok' in v_lower or 'крючок' in v_lower:
         variants.add('Mariia Kriuchok')
         variants.add('Марія Крючок')
-    elif 'kozerenko' in v_lower:
+    elif 'kozerenko' in v_lower or 'козеренко' in v_lower:
         variants.add('Сергій Козеренко')
+        variants.add('Сергей Козеренко')
         variants.add('Sergiy Kozerenko')
-    elif 'viedienieiev' in v_lower:
+    elif 'viedienieiev' in v_lower or 'ведєнєєв' in v_lower:
         variants.add('Володимир Ведєнєєв')
 
     # Smart ordering: Latin variants first for academic search engines, preserving exact Latin input
-    has_cyrillic = any(ord(c) > 127 for c in name)
     latin_variants = [v for v in variants if not any(ord(c) > 127 for c in v)]
     cyrillic_variants = [v for v in variants if any(ord(c) > 127 for c in v)]
+
+    def _rank_latin_variant(v: str) -> int:
+        score = 0
+        parts = v.split()
+        if len(parts) == 2:
+            first_part = parts[0].lower()
+            if any(first_part.startswith(p) for p in [
+                'serg', 'serh', 'timof', 'tymof', 'pavl', 'volod', 'vlad',
+                'igor', 'ihor', 'ivan', 'maks', 'kate', 'mari', 'olen',
+                'elen', 'yur', 'anna', 'hann', 'tet', 'tat', 'viach', 'vyach'
+            ]):
+                score += 50
+            if 'iy' in first_part:
+                score += 30
+            elif 'ey' in first_part:
+                score += 25
+            elif 'ii' in first_part:
+                score += 15
+            if 'giy' in first_part or 'gey' in first_part:
+                score += 20
+        return score
+
+    ranked_latin = sorted(latin_variants, key=_rank_latin_variant, reverse=True)
 
     ordered_variants = []
     if not has_cyrillic:
         ordered_variants.append(name.strip())
-        for v in latin_variants + cyrillic_variants:
+        for v in ranked_latin + cyrillic_variants:
             if v not in ordered_variants:
                 ordered_variants.append(v)
     else:
-        for v in sorted(latin_variants, key=len):
+        for v in ranked_latin:
             if v not in ordered_variants:
                 ordered_variants.append(v)
         ordered_variants.append(name.strip())
@@ -410,7 +551,7 @@ def search_google_scholar(
     serpapi_key = serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY
     if serpapi_key:
         api_candidates = []
-        for variant in name_variants[:4]:
+        for variant in name_variants[:6]:
             try:
                 params = {
                     'engine': 'google_scholar',
@@ -497,13 +638,15 @@ def search_google_scholar(
 # ==============================================================================
 # 6. UNIFIED DISCOVERY & VALIDATION PIPELINE
 # ==============================================================================
-def process_faculty_member(input_name: str) -> Dict:
-    print(f"\n{'='*60}")
-    print(f"PROCESSING: {input_name}")
-    print(f"{'='*60}")
+def process_faculty_member(input_name: str, verbose: bool = True) -> Dict:
+    if verbose:
+        print(f"\n{'='*60}")
+        print(f"PROCESSING: {input_name}")
+        print(f"{'='*60}")
 
     variants = generate_name_variants(input_name)
-    print(f"  Aliases considered: {variants[:4]}")
+    if verbose:
+        print(f"  Aliases considered: {variants[:4]}")
 
     # 1. OpenAlex lookup
     alex_data = query_openalex(variants)
@@ -606,53 +749,126 @@ def process_faculty_member(input_name: str) -> Dict:
         'sample_works': sample_works
     }
 
-    # Summary log
-    print(f"  [STATUS]: {status} (Score: {confidence}/100)")
-    if orcid_info:
-        print(f"  [ORCID]: {orcid_info.get('orcid_url')} ({orcid_info.get('source')})")
-    else:
-        print(f"  [ORCID]: Not found")
+    if verbose:
+        # Summary log
+        print(f"  [STATUS]: {status} (Score: {confidence}/100)")
+        if orcid_info:
+            print(f"  [ORCID]: {orcid_info.get('orcid_url')} ({orcid_info.get('source')})")
+        else:
+            print(f"  [ORCID]: Not found")
 
-    if scholar_info:
-        print(f"  [SCHOLAR]: {scholar_info.get('profile_url')} ({scholar_info.get('source')})")
-        affil = scholar_info.get('affiliations') or 'N/A'
-        print(f"             Affiliation: {affil[:70]} | Cited: {scholar_info.get('cited_by')}")
-    else:
-        print(f"  [SCHOLAR]: No registered profile found")
+        if scholar_info:
+            print(f"  [SCHOLAR]: {scholar_info.get('profile_url')} ({scholar_info.get('source')})")
+            affil = scholar_info.get('affiliations') or 'N/A'
+            print(f"             Affiliation: {affil[:70]} | Cited: {scholar_info.get('cited_by')}")
+        else:
+            print(f"  [SCHOLAR]: No registered profile found")
 
-    if alex_data:
-        print(f"  [METRICS]: h-index: {alex_data.get('h_index')}, Citations: {alex_data.get('cited_by_count')}, Works: {alex_data.get('works_count')}")
-        if sample_works:
-            print(f"  [SAMPLE WORK]: \"{sample_works[0]}\"")
+        if alex_data:
+            print(f"  [METRICS]: h-index: {alex_data.get('h_index')}, Citations: {alex_data.get('cited_by_count')}, Works: {alex_data.get('works_count')}")
+            if sample_works:
+                print(f"  [SAMPLE WORK]: \"{sample_works[0]}\"")
 
     return result
 
 # ==============================================================================
-# MAIN TEST SUITE
+# 7. COMMAND LINE INTERFACE (CLI)
 # ==============================================================================
+def main():
+    parser = argparse.ArgumentParser(
+        description="KSE Faculty Academic Profile Matcher (Google Scholar & ORCID iD)",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Query a single faculty member (supports Ukrainian, English, or Russian):
+  python faculty_matcher.py "Тимофій Брік"
+  python faculty_matcher.py "Sergiy Kozerenko"
+  python faculty_matcher.py "Сергей Козеренко"
+
+  # Query multiple members and save to file:
+  python faculty_matcher.py "Maksym Obrizan" "Павло Прокопович" -o results.json
+
+  # Read names from a text file (one name per line):
+  python faculty_matcher.py -f names.txt -o results.json
+
+  # Print raw JSON directly to stdout (pipe-friendly):
+  python faculty_matcher.py "Tymofii Brik" --json
+
+  # Run standard benchmark test suite:
+  python faculty_matcher.py --benchmark
+        """
+    )
+    parser.add_argument('names', nargs='*', help="Faculty member name(s) (supports UKR, ENG, RUS).")
+    parser.add_argument('-n', '--name', action='append', dest='flag_names', help="Faculty member name (can be repeated).")
+    parser.add_argument('-f', '--file', help="Path to text or JSON file containing faculty names.")
+    parser.add_argument('-o', '--output', help="Path to save output JSON file.")
+    parser.add_argument('--json', action='store_true', help="Output pure JSON to stdout (suppresses progress logs).")
+    parser.add_argument('-q', '--quiet', action='store_true', help="Suppress progress and summary messages.")
+    parser.add_argument('--benchmark', '--demo', action='store_true', help="Run benchmark on the 9 original test faculty.")
+
+    args = parser.parse_args()
+
+    names_to_process = []
+    if args.names:
+        names_to_process.extend(args.names)
+    if args.flag_names:
+        names_to_process.extend(args.flag_names)
+    if args.file:
+        if not os.path.exists(args.file):
+            print(f"Error: File '{args.file}' not found.", file=sys.stderr)
+            sys.exit(1)
+        with open(args.file, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+            if content.startswith('[') and content.endswith(']'):
+                try:
+                    parsed = json.loads(content)
+                    if isinstance(parsed, list):
+                        names_to_process.extend([str(x).strip() for x in parsed if str(x).strip()])
+                except Exception:
+                    pass
+            if not names_to_process:
+                for line in content.splitlines():
+                    cleaned = line.strip().strip(',;"\'')
+                    if cleaned:
+                        names_to_process.append(cleaned)
+
+    if args.benchmark:
+        names_to_process = [
+            "Viacheslav Priamitsyn",
+            "Sergiy Kozerenko",
+            "Volodymyr Viedienieiev",
+            "Kateryna Antoshyna",
+            "Mariia Kriuchok",
+            "Oleksandra Konopatska",
+            "Милованов Тимофій Сергійович",
+            "Прокопович Павло",
+            "Вахітова Ганна Миколаївна"
+        ]
+
+    if not names_to_process:
+        parser.print_help()
+        sys.exit(0)
+
+    verbose = not (args.json or args.quiet)
+
+    results = []
+    for name in names_to_process:
+        res = process_faculty_member(name, verbose=verbose)
+        results.append(res)
+
+    if args.json:
+        output_data = results[0] if len(results) == 1 else results
+        print(json.dumps(output_data, indent=2, ensure_ascii=False))
+    elif not args.quiet:
+        print(f"\n{'='*60}")
+        print(f"PROCESSED: {len(results)} faculty member(s)")
+        print(f"{'='*60}")
+
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8') as f:
+            json.dump(results if len(results) > 1 else results[0], f, indent=2, ensure_ascii=False)
+        if not args.json and not args.quiet:
+            print(f"Results successfully saved to {args.output}")
+
 if __name__ == '__main__':
-    test_faculty = [
-        # Original test batch
-        "Viacheslav Priamitsyn",
-        "Sergiy Kozerenko",
-        "Volodymyr Viedienieiev",
-        "Kateryna Antoshyna",
-        "Mariia Kriuchok",
-        "Oleksandra Konopatska",
-        # Challenging edge-case batch
-        "Милованов Тимофій Сергійович",
-        "Прокопович Павло",
-        "Вахітова Ганна Миколаївна"
-    ]
-
-    all_results = []
-    for member in test_faculty:
-        res = process_faculty_member(member)
-        all_results.append(res)
-
-    with open('faculty_results.json', 'w', encoding='utf-8') as f:
-        json.dump(all_results, f, indent=2, ensure_ascii=False)
-
-    print(f"\n{'='*60}")
-    print("ALL TESTS FINISHED! Results saved to faculty_results.json")
-    print(f"{'='*60}")
+    main()
