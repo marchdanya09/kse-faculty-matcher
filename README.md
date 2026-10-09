@@ -19,6 +19,9 @@ Automated, cost-effective pipeline for discovering, disambiguating, and validati
   - Multi-alias splitting: handles authors who list several name forms in their profile title (e.g. `"Ігор Сердюк, Igor Serdiuk, Ihor Serdiuk"`).
   - Strict institutional affiliation verification: requires verified KSE affiliation (or partner institutions like NaUKMA / NASU / KNU) to achieve `VERIFIED (AUTO)`.
   - Blocks homonyms from unrelated universities from being falsely matched.
+- **Explicit Diagnostics & Error Visibility:**
+  - Transparent distinction between true absence of a profile and API key / network errors.
+  - Dedicated diagnostic messages for missing keys, invalid credentials (HTTP 401/403), and quota exhaustion (HTTP 429).
 
 ---
 
@@ -26,8 +29,8 @@ Automated, cost-effective pipeline for discovering, disambiguating, and validati
 
 1. **Clone the repository:**
    ```bash
-   git clone <repo-url>
-   cd <repo-name>
+   git clone https://github.com/marchdanya09/kse-faculty-matcher.git
+   cd kse-faculty-matcher
    ```
 
 2. **Install dependencies:**
@@ -40,7 +43,8 @@ Automated, cost-effective pipeline for discovering, disambiguating, and validati
    ```bash
    cp .env.example .env
    ```
-   Set your `SERPAPI_API_KEY` (gives 250 free requests per month, enough for ~200+ faculty members with early-exit).
+   Set your `SERPAPI_API_KEY` (gives 250 free requests per month, enough for ~200+ faculty members with early exit).  
+   *Note:* You can also pass the API key directly via CLI using `--api-key <key>`.
 
 ---
 
@@ -51,36 +55,85 @@ The pipeline supports direct command-line execution with fuzzy matching across *
 ### 1. Single Faculty Lookup:
 ```bash
 # In Ukrainian:
-python faculty_matcher.py "Тимофій Брік"
+python3 faculty_matcher.py "Тимофій Брік"
 
 # In English:
-python faculty_matcher.py "Sergiy Kozerenko"
+python3 faculty_matcher.py "Sergiy Kozerenko"
 
 # In Russian:
-python faculty_matcher.py "Сергей Козеренко"
+python3 faculty_matcher.py "Сергей Козеренко"
 ```
 
-### 2. Output Pure JSON to stdout (Scripting & Piping):
+### 2. Pass SerpAPI Key Directly via CLI:
 ```bash
-python faculty_matcher.py "Тимофій Брік" --json
+python3 faculty_matcher.py "Sergiy Kozerenko" --api-key YOUR_SERPAPI_KEY
 ```
 
-### 3. Multiple Names & Save to File:
+### 3. Output Pure JSON to stdout (Scripting & Piping):
 ```bash
-python faculty_matcher.py "Maksym Obrizan" "Павло Прокопович" -o results.json
+python3 faculty_matcher.py "Тимофій Брік" --json
 ```
 
-### 4. Process Batch from File (One name per line or JSON array):
+### 4. Multiple Names & Save to File:
 ```bash
-python faculty_matcher.py --file faculty_list.txt -o results.json
+python3 faculty_matcher.py "Maksym Obrizan" "Павло Прокопович" -o results.json
 ```
 
-### 5. Run Default Benchmark Suite:
+### 5. Process Batch from File (One name per line or JSON array):
 ```bash
-python faculty_matcher.py --benchmark
-# Or run the batch 2 benchmark:
-python test_new_faculty.py
+python3 faculty_matcher.py -f faculty_list.txt -o results.json
 ```
+
+### 6. Silent Mode (Suppress Progress Logs):
+```bash
+python3 faculty_matcher.py -f faculty_list.txt -o results.json --quiet
+```
+
+### 7. Run Verification Benchmark Suite:
+```bash
+# Standard 9-faculty benchmark:
+python3 faculty_matcher.py --benchmark
+
+# Extended 15-faculty batch benchmark:
+python3 test_new_faculty.py
+```
+
+---
+
+## ⚙️ CLI Reference Table
+
+| Argument / Flag | Description |
+| :--- | :--- |
+| `names ...` | Positional faculty name(s) (supports UKR, ENG, RUS). |
+| `-n`, `--name NAME` | Faculty member name (can be repeated for multiple names). |
+| `-f`, `--file PATH` | Path to text file (one name per line) or JSON array of names. |
+| `-o`, `--output PATH` | Path to write output JSON file. |
+| `--api-key KEY` | SerpAPI key for Google Scholar lookup (overrides `.env` / environment). |
+| `--json` | Output pure JSON to stdout (suppresses progress logs for scripting/piping). |
+| `-q`, `--quiet` | Suppress progress and summary messages to stderr/stdout. |
+| `--benchmark`, `--demo` | Run the standard benchmark on the 9 reference faculty members. |
+| `-h`, `--help` | Show command-line help message and exit. |
+
+---
+
+## 🛡️ Error Diagnostics & Status Codes
+
+The matcher provides transparent status reporting to eliminate ambiguity between missing profiles and API configuration issues:
+
+| Status Code | Meaning |
+| :--- | :--- |
+| `VERIFIED (AUTO)` | High-confidence match (ORCID and/or Scholar confirmed with KSE email `@kse.org.ua` or institutional snippet). |
+| `PARTIAL MATCH (NEEDS REVIEW)` | Valid ORCID found with KSE affiliation, but Google Scholar profile is unregistered or not indexed. |
+| `PARTIAL MATCH (SCHOLAR API ERROR)` | Valid ORCID found, but Scholar resolution failed due to an API key or quota issue. |
+| `NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)` | Profile found with matching name, but without confirmed KSE affiliation (blocks false positives). |
+| `MISSING / NOT FOUND` | No matching profiles found across any database (verified absent). |
+| `ERROR (SCHOLAR API KEY ERROR)` | Scholar lookup could not be performed due to missing or invalid API credentials. |
+
+### `[SCHOLAR]` Diagnostic Messages:
+- `[SCHOLAR]: ERROR — API key not configured (set SERPAPI_API_KEY in .env or pass --api-key)`: Key is completely missing.
+- `[SCHOLAR]: ERROR — SerpAPI access denied (HTTP 401: Invalid API key)`: Provided API key is incorrect or expired.
+- `[SCHOLAR]: ERROR — SerpAPI search quota exceeded (HTTP 429: Account out of searches)`: Monthly search limit exhausted.
+- `[SCHOLAR]: No registered profile found`: API call succeeded (HTTP 200) and author legitimately has no public profile.
 
 ---
 

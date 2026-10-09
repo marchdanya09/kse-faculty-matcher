@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore")
+
 import argparse
 import json
 import os
@@ -571,97 +574,147 @@ def search_google_scholar(
         return cse_result
 
     # 2. Tier 3: SerpAPI with Early Exit (Paid / Free Monthly Credits)
-    serpapi_key = serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY
-    if serpapi_key:
-        api_candidates = []
-        for variant in name_variants[:6]:
-            try:
-                params = {
-                    'engine': 'google_scholar',
-                    'q': variant,
-                    'api_key': serpapi_key
-                }
-                r = requests.get('https://serpapi.com/search.json', params=params, timeout=10)
-                if r.status_code == 200:
-                    data = r.json()
-                    authors = data.get('profiles', {}).get('authors', [])
-                    for a in authors:
-                        cand_name = a.get('name', '')
-                        cand_affil = a.get('affiliations', '')
-                        email = a.get('email', '')
+    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+    if not serpapi_key:
+        return {
+            'error': True,
+            'error_type': 'API_KEY_MISSING',
+            'message': 'API key not configured (set SERPAPI_API_KEY in .env or pass --api-key)'
+        }
 
-                        # Split multiple author aliases in Scholar name (e.g. 'Ігор Сердюк, Igor Serdiuk')
-                        sub_names = [s.strip() for s in re.split(r'[,/;|]', cand_name) if s.strip()]
-                        sim = max(fuzz.token_sort_ratio(v, sub) for v in name_variants for sub in (sub_names or [cand_name]))
-                        is_kse = (
-                            any(k in cand_affil.lower() for k in KSE_INSTITUTION_KEYWORDS) or
-                            'kse.org.ua' in email.lower()
-                        )
-                        is_partner = any(p in cand_affil.lower() for p in PARTNER_INSTITUTION_KEYWORDS)
+    api_candidates = []
+    api_error = None
 
-                        if is_kse:
-                            sim += 25
-                        elif is_partner:
-                            sim += 10
-                        else:
-                            # Homonym penalty if profile belongs to an unrelated institution
-                            sim = min(sim, 65)
-
-                        if sim >= 75:
-                            cand_obj = {
-                                'scholar_id': a.get('author_id'),
-                                'profile_url': a.get('link'),
-                                'name': cand_name,
-                                'affiliations': cand_affil,
-                                'email_verification': email,
-                                'is_kse_affiliated': is_kse,
-                                'cited_by': a.get('cited_by'),
-                                'source': 'SerpAPI (Google Scholar Engine)',
-                                'match_score': min(sim, 100)
-                            }
-                            # EARLY EXIT: Save paid credits immediately if high-confidence KSE profile found
-                            if is_kse and sim >= 90:
-                                return cand_obj
-                            api_candidates.append(cand_obj)
-            except Exception as e:
-                print(f"  [SerpAPI Error for {variant}]: {e}")
-
-        if api_candidates:
-            api_candidates.sort(key=lambda x: (x['is_kse_affiliated'], x['match_score']), reverse=True)
-            return api_candidates[0]
-
-    # 2. Web search fallback (DuckDuckGo with polite headers)
-    for variant in name_variants[:2]:
+    for variant in name_variants[:6]:
         try:
-            query = f'site:scholar.google.com/citations {variant}'
-            r = requests.post(
-                'https://html.duckduckgo.com/html/',
-                data={'q': query},
-                headers={'User-Agent': BROWSER_USER_AGENT},
-                timeout=6
-            )
+            params = {
+                'engine': 'google_scholar',
+                'q': variant,
+                'api_key': serpapi_key
+            }
+            r = requests.get('https://serpapi.com/search.json', params=params, timeout=10)
             if r.status_code == 200:
-                soup = BeautifulSoup(r.text, 'html.parser')
-                for a in soup.find_all('a'):
-                    raw = urllib.parse.unquote(a.get('href', ''))
-                    if 'citations?user=' in raw:
-                        m = re.search(r'user=([a-zA-Z0-9_\-]+)', raw)
-                        if m:
-                            uid = m.group(1)
-                            return {
-                                'scholar_id': uid,
-                                'profile_url': f'https://scholar.google.com/citations?user={uid}',
-                                'source': 'Web Search Fallback'
-                            }
-        except Exception:
-            pass
+                data = r.json()
+                if "error" in data:
+                    err_msg = data["error"]
+                    if "run out of searches" in err_msg.lower() or "quota" in err_msg.lower():
+                        api_error = {
+                            'error': True,
+                            'error_type': 'QUOTA_EXCEEDED',
+                            'message': f'SerpAPI quota exceeded: {err_msg}'
+                        }
+                    else:
+                        api_error = {
+                            'error': True,
+                            'error_type': 'API_ERROR',
+                            'message': f'SerpAPI error: {err_msg}'
+                        }
+                    break
+
+                authors = data.get('profiles', {}).get('authors', [])
+                for a in authors:
+                    cand_name = a.get('name', '')
+                    cand_affil = a.get('affiliations', '')
+                    email = a.get('email', '')
+
+                    # Split multiple author aliases in Scholar name (e.g. 'Ігор Сердюк, Igor Serdiuk')
+                    sub_names = [s.strip() for s in re.split(r'[,/;|]', cand_name) if s.strip()]
+                    sim = max(fuzz.token_sort_ratio(v, sub) for v in name_variants for sub in (sub_names or [cand_name]))
+                    is_kse = (
+                        any(k in cand_affil.lower() for k in KSE_INSTITUTION_KEYWORDS) or
+                        'kse.org.ua' in email.lower()
+                    )
+                    is_partner = any(p in cand_affil.lower() for p in PARTNER_INSTITUTION_KEYWORDS)
+
+                    if is_kse:
+                        sim += 25
+                    elif is_partner:
+                        sim += 10
+                    else:
+                        # Homonym penalty if profile belongs to an unrelated institution
+                        sim = min(sim, 65)
+
+                    if sim >= 75:
+                        cand_obj = {
+                            'scholar_id': a.get('author_id'),
+                            'profile_url': a.get('link'),
+                            'name': cand_name,
+                            'affiliations': cand_affil,
+                            'email_verification': email,
+                            'is_kse_affiliated': is_kse,
+                            'cited_by': a.get('cited_by'),
+                            'source': 'SerpAPI (Google Scholar Engine)',
+                            'match_score': min(sim, 100)
+                        }
+                        # EARLY EXIT: Save paid credits immediately if high-confidence KSE profile found
+                        if is_kse and sim >= 90:
+                            return cand_obj
+                        api_candidates.append(cand_obj)
+            elif r.status_code == 401:
+                try:
+                    err_msg = r.json().get('error', 'Invalid API key')
+                except Exception:
+                    err_msg = 'Invalid API key'
+                api_error = {
+                    'error': True,
+                    'error_type': 'API_KEY_INVALID',
+                    'message': f'SerpAPI access denied (HTTP 401: {err_msg})'
+                }
+                break
+            elif r.status_code == 403:
+                try:
+                    err_msg = r.json().get('error', 'Forbidden / Access denied')
+                except Exception:
+                    err_msg = 'Forbidden'
+                api_error = {
+                    'error': True,
+                    'error_type': 'ACCESS_FORBIDDEN',
+                    'message': f'SerpAPI access forbidden (HTTP 403: {err_msg})'
+                }
+                break
+            elif r.status_code == 429:
+                try:
+                    err_msg = r.json().get('error', 'Quota exceeded')
+                except Exception:
+                    err_msg = 'Quota exceeded'
+                api_error = {
+                    'error': True,
+                    'error_type': 'QUOTA_EXCEEDED',
+                    'message': f'SerpAPI search quota exceeded (HTTP 429: {err_msg})'
+                }
+                break
+            else:
+                api_error = {
+                    'error': True,
+                    'error_type': 'API_ERROR',
+                    'message': f'SerpAPI returned HTTP {r.status_code}'
+                }
+                break
+        except requests.exceptions.RequestException as e:
+            api_error = {
+                'error': True,
+                'error_type': 'NETWORK_ERROR',
+                'message': f'SerpAPI network error: {e}'
+            }
+            break
+
+    if api_candidates:
+        api_candidates.sort(key=lambda x: (x['is_kse_affiliated'], x['match_score']), reverse=True)
+        return api_candidates[0]
+
+    if api_error:
+        return api_error
 
     return None
 
 # ==============================================================================
 # 6. UNIFIED DISCOVERY & VALIDATION PIPELINE
 # ==============================================================================
-def process_faculty_member(input_name: str, verbose: bool = True) -> Dict:
+def process_faculty_member(
+    input_name: str,
+    verbose: bool = True,
+    serpapi_key: Optional[str] = None
+) -> Dict:
     if verbose:
         print(f"\n{'='*60}")
         print(f"PROCESSING: {input_name}")
@@ -697,25 +750,33 @@ def process_faculty_member(input_name: str, verbose: bool = True) -> Dict:
         scholar_info = get_scholar_from_wikidata(orcid_info['orcid_id'])
 
     if not scholar_info:
-        scholar_info = search_google_scholar(variants, sample_works)
+        scholar_info = search_google_scholar(variants, sample_works, serpapi_key=serpapi_key)
+
+    scholar_error = None
+    scholar_profile = None
+    if scholar_info:
+        if scholar_info.get('error'):
+            scholar_error = scholar_info.get('message')
+        else:
+            scholar_profile = scholar_info
 
     # 4. Affiliation checks for Disambiguation & Anti-Homonym Protection
     has_kse_orcid = bool(orcid_info and any(any(k in inst.lower() for k in KSE_INSTITUTION_KEYWORDS) for inst in orcid_info.get('institutions', [])))
-    has_kse_scholar = bool(scholar_info and (
-        any(k in (scholar_info.get('affiliations') or '').lower() for k in KSE_INSTITUTION_KEYWORDS) or
-        'kse.org.ua' in (scholar_info.get('email_verification') or '').lower()
+    has_kse_scholar = bool(scholar_profile and (
+        any(k in (scholar_profile.get('affiliations') or '').lower() for k in KSE_INSTITUTION_KEYWORDS) or
+        'kse.org.ua' in (scholar_profile.get('email_verification') or '').lower()
     ))
     has_kse_alex = bool(alex_data and alex_data.get('has_kse_affiliation'))
     has_any_kse = has_kse_orcid or has_kse_scholar or has_kse_alex
 
     has_partner_orcid = bool(orcid_info and any(any(k in inst.lower() for k in PARTNER_INSTITUTION_KEYWORDS) for inst in orcid_info.get('institutions', [])))
-    has_partner_scholar = bool(scholar_info and any(k in (scholar_info.get('affiliations') or '').lower() for k in PARTNER_INSTITUTION_KEYWORDS))
+    has_partner_scholar = bool(scholar_profile and any(k in (scholar_profile.get('affiliations') or '').lower() for k in PARTNER_INSTITUTION_KEYWORDS))
     has_any_partner = has_partner_orcid or has_partner_scholar
 
     # Discard non-KSE/non-partner Scholar profile if it was just a weak homonym match
-    if scholar_info and not (has_kse_scholar or has_partner_scholar):
-        if scholar_info.get('match_score', 0) < 85:
-            scholar_info = None
+    if scholar_profile and not (has_kse_scholar or has_partner_scholar):
+        if scholar_profile.get('match_score', 0) < 85:
+            scholar_profile = None
 
     confidence = 0
     reasons = []
@@ -731,16 +792,18 @@ def process_faculty_member(input_name: str, verbose: bool = True) -> Dict:
         else:
             reasons.append("ORCID found (affiliation unverified)")
 
-    if scholar_info:
+    if scholar_profile:
         confidence += 35
         if has_kse_scholar:
             confidence += 15
-            reasons.append(f"Scholar profile matched ({scholar_info.get('match_score', 100)}% with KSE verification)")
+            reasons.append(f"Scholar profile matched ({scholar_profile.get('match_score', 100)}% with KSE verification)")
         elif has_partner_scholar:
             confidence += 5
-            reasons.append(f"Scholar profile matched ({scholar_info.get('match_score', 100)}% with partner institution)")
+            reasons.append(f"Scholar profile matched ({scholar_profile.get('match_score', 100)}% with partner institution)")
         else:
-            reasons.append(f"Scholar profile matched ({scholar_info.get('match_score', 100)}%)")
+            reasons.append(f"Scholar profile matched ({scholar_profile.get('match_score', 100)}%)")
+    elif scholar_error:
+        reasons.append(f"Scholar lookup skipped: {scholar_error}")
 
     if has_kse_alex:
         confidence += 10
@@ -753,9 +816,15 @@ def process_faculty_member(input_name: str, verbose: bool = True) -> Dict:
         if not (has_any_kse or has_any_partner):
             status = "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)"
         else:
-            status = "PARTIAL MATCH (NEEDS REVIEW)"
+            if scholar_error:
+                status = "PARTIAL MATCH (SCHOLAR API ERROR)"
+            else:
+                status = "PARTIAL MATCH (NEEDS REVIEW)"
     else:
-        status = "MISSING / NOT FOUND"
+        if scholar_error:
+            status = "ERROR (SCHOLAR API KEY ERROR)"
+        else:
+            status = "MISSING / NOT FOUND"
 
     result = {
         'input_name': input_name,
@@ -763,7 +832,8 @@ def process_faculty_member(input_name: str, verbose: bool = True) -> Dict:
         'confidence_score': confidence,
         'reasons': reasons,
         'orcid': orcid_info,
-        'scholar': scholar_info,
+        'scholar': scholar_profile,
+        'scholar_error': scholar_error,
         'metrics': {
             'h_index': alex_data.get('h_index', 0) if alex_data else 0,
             'citations': alex_data.get('cited_by_count', 0) if alex_data else 0,
@@ -780,10 +850,12 @@ def process_faculty_member(input_name: str, verbose: bool = True) -> Dict:
         else:
             print(f"  [ORCID]: Not found")
 
-        if scholar_info:
-            print(f"  [SCHOLAR]: {scholar_info.get('profile_url')} ({scholar_info.get('source')})")
-            affil = scholar_info.get('affiliations') or 'N/A'
-            print(f"             Affiliation: {affil[:70]} | Cited: {scholar_info.get('cited_by')}")
+        if scholar_profile:
+            print(f"  [SCHOLAR]: {scholar_profile.get('profile_url')} ({scholar_profile.get('source')})")
+            affil = scholar_profile.get('affiliations') or 'N/A'
+            print(f"             Affiliation: {affil[:70]} | Cited: {scholar_profile.get('cited_by')}")
+        elif scholar_error:
+            print(f"  [SCHOLAR]: ERROR — {scholar_error}")
         else:
             print(f"  [SCHOLAR]: No registered profile found")
 
@@ -880,7 +952,7 @@ Examples:
 
     results = []
     for name in names_to_process:
-        res = process_faculty_member(name, verbose=verbose)
+        res = process_faculty_member(name, verbose=verbose, serpapi_key=args.api_key)
         results.append(res)
 
     if args.json:
