@@ -76,7 +76,7 @@ UKR_TRANSLIT_MEDIAL = {
     'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
     'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ю': 'iu', 'я': 'ia',
     'ы': 'y', 'Ы': 'Y', 'э': 'e', 'Э': 'E', 'ё': 'io', 'Ё': 'Io', 'ъ': '', 'Ъ': '',
-    'ь': '', '\'': '', '’': '', 'ʼ': '', '`': ''
+    'ь': '', '\'': '', '’': '', 'ʼ': '', '`': '', '‘': '', '´': '', 'ʻ': ''
 }
 
 RU_TRANSLIT_INITIAL = {
@@ -94,7 +94,8 @@ RU_TRANSLIT_MEDIAL = {
     'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
     'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
     'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-    'і': 'i', 'І': 'I', 'ї': 'i', 'Ї': 'I', 'є': 'ye', 'Є': 'Ye', 'ґ': 'g', 'Ґ': 'G'
+    'і': 'i', 'І': 'I', 'ї': 'i', 'Ї': 'I', 'є': 'ye', 'Є': 'Ye', 'ґ': 'g', 'Ґ': 'G',
+    '\'': '', '’': '', 'ʼ': '', '`': '', '‘': '', '´': '', 'ʻ': ''
 }
 
 CROSS_LANG_NAME_PAIRS = {
@@ -172,18 +173,23 @@ def transliterate_ru(text: str) -> str:
 
 def generate_name_variants(name: str) -> List[str]:
     """Generates structured name variants across Ukrainian, English, and Russian (CMU 2010 & BGN)."""
-    clean_str = re.sub(r'[\’\ʼ\`]', "'", name.strip())
+    if not name or not name.strip():
+        return []
+    clean_str = re.sub(r'[\’\ʼ\`\‘\´\ʻ]', "'", name.strip())
+    clean_str = re.sub(r'\s*-\s*', '-', clean_str)
     tokens = [t for t in re.split(r'\s+', clean_str) if t]
     if not tokens:
         return [name]
 
     clean_tokens = list(tokens)
-    # Strip patronymic ONLY if 3+ tokens (protects surnames like Прокопович)
+    # Strip patronymic ONLY if 3+ tokens (protects surnames like Прокопович).
+    # Check tokens[1] first so "First Patronymic Last" (e.g. Павло Олександрович Прокопович)
+    # does not accidentally strip the surname Прокопович!
     if len(tokens) >= 3:
-        if tokens[-1].lower().endswith(PATRONYMIC_ENDINGS):
-            clean_tokens = tokens[:-1]
-        elif tokens[1].lower().endswith(PATRONYMIC_ENDINGS):
+        if tokens[1].lower().endswith(PATRONYMIC_ENDINGS):
             clean_tokens = [tokens[0]] + tokens[2:]
+        elif tokens[-1].lower().endswith(PATRONYMIC_ENDINGS):
+            clean_tokens = tokens[:-1]
 
     orders = []
     if len(clean_tokens) == 2:
@@ -229,23 +235,13 @@ def generate_name_variants(name: str) -> List[str]:
             tr_r = transliterate_ru(order)
             variants.add(tr_r)
     else:
-        # Latin input: generate swapped orders & check for known Cyrillic mappings
+        # Latin input: generate swapped orders
         for order in orders:
             variants.add(order)
             if 'ii' in order:
                 variants.add(order.replace('ii', 'iy'))
             if 'iy' in order:
                 variants.add(order.replace('iy', 'ii'))
-
-        if len(clean_tokens) == 2:
-            t0_low = clean_tokens[0].lower()
-            t1_low = clean_tokens[1].lower()
-            if t0_low in LATIN_TO_CYR_NAMES:
-                for cyr_fn in LATIN_TO_CYR_NAMES[t0_low]:
-                    variants.add(f"{cyr_fn} {clean_tokens[1]}")
-            if t1_low in LATIN_TO_CYR_NAMES:
-                for cyr_fn in LATIN_TO_CYR_NAMES[t1_low]:
-                    variants.add(f"{cyr_fn} {clean_tokens[0]}")
 
     # Specific historical roster aliases
     v_lower = name.lower()
@@ -277,7 +273,12 @@ def generate_name_variants(name: str) -> List[str]:
             if any(first_part.startswith(p) for p in [
                 'serg', 'serh', 'timof', 'tymof', 'pavl', 'volod', 'vlad',
                 'igor', 'ihor', 'ivan', 'maks', 'kate', 'mari', 'olen',
-                'elen', 'yur', 'anna', 'hann', 'tet', 'tat', 'viach', 'vyach'
+                'elen', 'yur', 'anna', 'hann', 'tet', 'tat', 'viach', 'vyach',
+                'myk', 'mik', 'oleks', 'alex', 'andr', 'dmyt', 'dmit', 'rom',
+                'nat', 'boh', 'bog', 'tar', 'vas', 'vikt', 'yevh', 'evg',
+                'yul', 'oks', 'dar', 'svit', 'stan', 'den', 'ant', 'art',
+                'borys', 'boris', 'kost', 'kyr', 'kir', 'lev', 'mary', 'nadi',
+                'pol', 'step', 'yar', 'rusl', 'bahr', 'vad'
             ]):
                 score += 50
             if 'iy' in first_part:
@@ -312,6 +313,39 @@ def generate_name_variants(name: str) -> List[str]:
 # ==============================================================================
 # 2. TIER 1: WIKIDATA SPARQL BRIDGE (100% FREE, 0 BAN RISK)
 # ==============================================================================
+def normalize_title(title: str) -> str:
+    """Normalizes publication title by stripping HTML entities, unicode quotes, dashes, and extra whitespace."""
+    if not title:
+        return ""
+    import html
+    t = html.unescape(str(title))
+    # Normalize unicode quotes and apostrophes
+    t = re.sub(r'[\u2018\u2019\u201A\u201B\u2032\u02BC`]', "'", t)
+    t = re.sub(r'[\u201C\u201D\u201E\u201F\u2033"]', '"', t)
+    # Normalize unicode hyphens and dashes
+    t = re.sub(r'[\u2010\u2011\u2012\u2013\u2014\u2015\u2212]', '-', t)
+    # Strip HTML tags
+    t = re.sub(r'<[^>]+>', ' ', t)
+    # Normalize whitespace
+    t = re.sub(r'\s+', ' ', t).strip()
+    return t
+
+def match_publication_title(kw: str, candidate_title: str, threshold: float = 75) -> bool:
+    """Robustly checks if a candidate work title matches a known ground-truth work."""
+    if not kw or not candidate_title:
+        return False
+    kw_norm = normalize_title(kw).lower()
+    cand_norm = normalize_title(candidate_title).lower()
+    if fuzz.token_set_ratio(kw_norm, cand_norm) >= threshold:
+        return True
+    # Subtitle splitting: compare main titles before colon or dash
+    kw_main = re.split(r'[:\-–—]', kw_norm)[0].strip()
+    cand_main = re.split(r'[:\-–—]', cand_norm)[0].strip()
+    if len(kw_main) > 15 and len(cand_main) > 15:
+        if fuzz.token_set_ratio(kw_main, cand_main) >= max(threshold, 80):
+            return True
+    return False
+
 def get_scholar_from_wikidata(orcid: str) -> Optional[Dict]:
     """Resolves an ORCID to Google Scholar ID via Wikidata P1960. Free, official, zero ban risk."""
     if not orcid:
@@ -337,7 +371,9 @@ def get_scholar_from_wikidata(orcid: str) -> Optional[Dict]:
                 return {
                     "scholar_id": scholar_id,
                     "profile_url": f"https://scholar.google.com/citations?user={scholar_id}&hl=en",
-                    "source": "Wikidata SPARQL Bridge (Free Tier 1)"
+                    "source": "Wikidata SPARQL Bridge (Free Tier 1)",
+                    "match_score": 100,
+                    "is_wikidata_crosslink": True
                 }
     except Exception:
         pass
@@ -357,12 +393,12 @@ def fetch_orcid_works(orcid_id: str) -> List[str]:
     try:
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            for group in data.get("group", []):
-                for summary in group.get("work-summary", []):
-                    title_obj = summary.get("title", {}).get("title", {})
+            for group in (data.get("group") or []):
+                for summary in (group.get("work-summary") or []):
+                    title_obj = (summary.get("title") or {}).get("title") or {}
                     t_val = title_obj.get("value")
-                    if t_val and t_val.strip():
-                        works.append(t_val.strip())
+                    if t_val and str(t_val).strip():
+                        works.append(str(t_val).strip())
     except Exception:
         pass
     return works
@@ -383,20 +419,20 @@ def resolve_direct_orcid(orcid_input: str) -> Optional[Dict]:
     try:
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            person = data.get("person", {})
-            name_obj = person.get("name", {})
-            given = (name_obj.get("given-names") or {}).get("value", "")
-            family = (name_obj.get("family-name") or {}).get("value", "")
+            person = data.get("person") or {}
+            name_obj = person.get("name") or {}
+            given = ((name_obj.get("given-names") or {}).get("value") or "").strip()
+            family = ((name_obj.get("family-name") or {}).get("value") or "").strip()
             full_name = f"{given} {family}".strip()
 
             insts = []
-            affils = data.get("activities-summary", {}).get("employments", {}).get("affiliation-group", [])
-            for aff in affils:
-                for sum_item in aff.get("summaries", []):
-                    emp = sum_item.get("employment-summary", {})
-                    org = emp.get("organization", {}).get("name")
+            employments = ((data.get("activities-summary") or {}).get("employments") or {}).get("affiliation-group") or []
+            for aff in employments:
+                for sum_item in (aff.get("summaries") or []):
+                    emp = sum_item.get("employment-summary") or {}
+                    org = (emp.get("organization") or {}).get("name")
                     if org:
-                        insts.append(org)
+                        insts.append(str(org))
 
             return {
                 'orcid_id': clean_id,
@@ -469,14 +505,16 @@ def resolve_direct_scholar(scholar_input: str, serpapi_key: Optional[str] = None
         }, timeout=25, max_retries=2)
         if r and r.status_code == 200:
             data = r.json()
-            author = data.get('author', {})
+            author = data.get('author') or {}
             cand_obj['name'] = author.get('name', '')
             cand_obj['affiliations'] = author.get('affiliations', '')
             cand_obj['email_verification'] = author.get('email', '')
-            cited_all = data.get('cited_by', {}).get('table', [{}])[0].get('citations', {}).get('all')
-            if cited_all is not None:
-                cand_obj['cited_by'] = cited_all
-            cand_obj['articles'] = [a.get('title') for a in data.get('articles', []) if a.get('title')]
+            table = (data.get('cited_by') or {}).get('table') or []
+            if table and isinstance(table, list) and len(table) > 0 and isinstance(table[0], dict):
+                cited_all = (table[0].get('citations') or {}).get('all')
+                if cited_all is not None:
+                    cand_obj['cited_by'] = cited_all
+            cand_obj['articles'] = [a.get('title') for a in (data.get('articles') or []) if isinstance(a, dict) and a.get('title')]
     except Exception:
         pass
     return cand_obj
@@ -493,79 +531,101 @@ def search_scholar_by_article(
         return None
 
     variants = name_variants or generate_name_variants(author_name)
-    params = {
-        'engine': 'google_scholar',
-        'q': f"{author_name} {article_title}".strip(),
-        'api_key': serpapi_key
-    }
-    try:
-        r = safe_serpapi_get(params, timeout=25, max_retries=2)
-        if r and r.status_code == 200:
-            data = r.json()
-            for item in data.get('organic_results', []):
-                item_title = item.get('title', '')
-                title_sim = fuzz.token_set_ratio(article_title.lower(), item_title.lower())
-                if title_sim < 70:
-                    continue
-                # Inspect authors listed in publication_info
-                pub_info = item.get('publication_info', {})
-                authors = pub_info.get('authors', [])
-                for a in authors:
-                    a_name = a.get('name', '')
-                    a_id = a.get('author_id')
-                    link = a.get('link', '')
-                    if not a_id and 'user=' in link:
-                        m = re.search(r'user=([a-zA-Z0-9_\-]+)', link)
-                        if m:
-                            a_id = m.group(1)
+    clean_kw = normalize_title(article_title)
+    clean_kw = re.sub(r'^[\'"“‘\s]+|[\'"”’\s]+$', '', clean_kw)
 
-                    if not a_id:
+    queries_to_try = [f"{author_name} {clean_kw}".strip()]
+    # If the title has a subtitle, also try querying with main title
+    if ':' in clean_kw:
+        main_t = clean_kw.split(':', 1)[0].strip()
+        if len(main_t) > 15:
+            queries_to_try.append(f"{author_name} {main_t}".strip())
+
+    for q_str in queries_to_try:
+        params = {
+            'engine': 'google_scholar',
+            'q': q_str,
+            'api_key': serpapi_key
+        }
+        try:
+            r = safe_serpapi_get(params, timeout=25, max_retries=2)
+            if r and r.status_code == 200:
+                data = r.json()
+                for item in data.get('organic_results', []):
+                    item_title = item.get('title', '')
+                    if not match_publication_title(article_title, item_title, threshold=70):
                         continue
+                    # Inspect authors listed in publication_info
+                    pub_info = item.get('publication_info', {})
+                    authors = pub_info.get('authors', [])
+                    for a in authors:
+                        a_name = a.get('name', '')
+                        a_id = a.get('author_id')
+                        link = a.get('link', '')
+                        if not a_id and 'user=' in link:
+                            m = re.search(r'user=([a-zA-Z0-9_\-]+)', link)
+                            if m:
+                                a_id = m.group(1)
 
-                    # Check name similarity with our author name variants
-                    name_sim = max(fuzz.token_sort_ratio(v, a_name) for v in variants)
-                    # Short initials match like 'M Trehub' or 'V Priamitsyn'
-                    if name_sim < 70:
-                        parts = a_name.split()
-                        if len(parts) >= 2:
-                            surname = parts[-1]
-                            initial = parts[0][0].upper()
-                            for v in variants:
-                                v_parts = v.split()
-                                if len(v_parts) >= 2 and v_parts[-1].lower() == surname.lower() and v_parts[0][0].upper() == initial:
-                                    name_sim = 85
-                                    break
+                        if not a_id:
+                            continue
 
-                    if name_sim >= 70:
-                        cand_obj = {
-                            'scholar_id': a_id,
-                            'profile_url': f"https://scholar.google.com/citations?user={a_id}&hl=en",
-                            'name': a_name,
-                            'source': 'SerpAPI (Publication Co-Citation Anchor)',
-                            'match_score': 100,
-                            'matched_article': item_title,
-                            'ground_truth_matched': True
-                        }
-                        # Fetch full profile info for clean affiliations and citation counts
-                        try:
-                            prof_r = safe_serpapi_get({
-                                'engine': 'google_scholar_author',
-                                'author_id': a_id,
-                                'api_key': serpapi_key
-                            }, timeout=20, max_retries=1)
-                            if prof_r and prof_r.status_code == 200:
-                                p_data = prof_r.json().get('author', {})
-                                cand_obj['affiliations'] = p_data.get('affiliations', '')
-                                cand_obj['email_verification'] = p_data.get('email', '')
-                                cand_obj['cited_by'] = prof_r.json().get('cited_by', {}).get('table', [{}])[0].get('citations', {}).get('all')
-                                if p_data.get('name'):
-                                    cand_obj['name'] = p_data.get('name')
-                        except Exception:
-                            pass
-                        return cand_obj
-    except Exception:
-        pass
+                        # Check name similarity with our author name variants
+                        name_sim = max(fuzz.token_sort_ratio(v, a_name) for v in variants)
+                        # Short initials match like 'M Trehub', 'Trehub, M', 'Trehub, M.V.'
+                        if name_sim < 70:
+                            clean_a = re.sub(r'[.,]', ' ', a_name).strip()
+                            a_parts = clean_a.split()
+                            if len(a_parts) >= 2:
+                                for v in variants:
+                                    v_parts = v.split()
+                                    if len(v_parts) >= 2:
+                                        v_surname = v_parts[-1].lower()
+                                        v_initial = v_parts[0][0].upper()
+                                        if a_parts[-1].lower() == v_surname and a_parts[0][0].upper() == v_initial:
+                                            name_sim = 85
+                                            break
+                                        if a_parts[0].lower() == v_surname and a_parts[1][0].upper() == v_initial:
+                                            name_sim = 85
+                                            break
+
+                        if name_sim >= 70:
+                            cand_obj = {
+                                'scholar_id': a_id,
+                                'profile_url': f"https://scholar.google.com/citations?user={a_id}&hl=en",
+                                'name': a_name,
+                                'source': 'SerpAPI (Publication Co-Citation Anchor)',
+                                'match_score': 100,
+                                'matched_article': item_title,
+                                'ground_truth_matched': True
+                            }
+                            # Fetch full profile info for clean affiliations and citation counts
+                            try:
+                                prof_r = safe_serpapi_get({
+                                    'engine': 'google_scholar_author',
+                                    'author_id': a_id,
+                                    'api_key': serpapi_key
+                                }, timeout=20, max_retries=1)
+                                if prof_r and prof_r.status_code == 200:
+                                    p_json = prof_r.json()
+                                    p_data = p_json.get('author', {})
+                                    cand_obj['affiliations'] = p_data.get('affiliations', '')
+                                    cand_obj['email_verification'] = p_data.get('email', '')
+                                    table = (p_json.get('cited_by') or {}).get('table') or []
+                                    if table and isinstance(table, list) and len(table) > 0 and isinstance(table[0], dict):
+                                        c_val = (table[0].get('citations') or {}).get('all')
+                                        if c_val is not None:
+                                            cand_obj['cited_by'] = c_val
+                                    if p_data.get('name'):
+                                        cand_obj['name'] = p_data.get('name')
+                            except Exception:
+                                pass
+                            return cand_obj
+        except Exception:
+            pass
     return None
+
+_VERIFIED_WORKS_CACHE: Dict[str, List[str]] = {}
 
 def verify_scholar_candidate_works(
     scholar_id: str,
@@ -578,21 +638,28 @@ def verify_scholar_candidate_works(
     serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
     if not serpapi_key:
         return None
-    try:
-        r = safe_serpapi_get({
-            'engine': 'google_scholar_author',
-            'author_id': scholar_id,
-            'api_key': serpapi_key,
-            'num': 20
-        }, timeout=20, max_retries=2)
-        if r and r.status_code == 200:
-            articles = [a.get('title', '') for a in r.json().get('articles', []) if a.get('title')]
-            for kw in known_works:
-                for art in articles:
-                    if fuzz.token_set_ratio(kw.lower(), art.lower()) >= 80:
-                        return art
-    except Exception:
-        pass
+
+    if scholar_id in _VERIFIED_WORKS_CACHE:
+        articles = _VERIFIED_WORKS_CACHE[scholar_id]
+    else:
+        articles = []
+        try:
+            r = safe_serpapi_get({
+                'engine': 'google_scholar_author',
+                'author_id': scholar_id,
+                'api_key': serpapi_key,
+                'num': 20
+            }, timeout=20, max_retries=2)
+            if r and r.status_code == 200:
+                articles = [a.get('title', '') for a in (r.json().get('articles') or []) if isinstance(a, dict) and a.get('title')]
+                _VERIFIED_WORKS_CACHE[scholar_id] = articles
+        except Exception:
+            pass
+
+    for kw in known_works:
+        for art in articles:
+            if match_publication_title(kw, art, threshold=75):
+                return art
     return None
 
 # ==============================================================================
@@ -617,17 +684,21 @@ def query_openalex(
                     data = json.loads(resp.read().decode())
                     results = data.get('results', [])
                     for cand in results[:10]:
-                        cid = cand.get('id')
-                        if cid in seen_ids:
+                        cid = cand.get('id') or ''
+                        if not cid or cid in seen_ids:
                             continue
                         seen_ids.add(cid)
 
-                        dname = cand.get('display_name', '')
+                        dname = str(cand.get('display_name') or '')
                         name_sim = max(fuzz.token_sort_ratio(v, dname) for v in name_variants)
                         if name_sim < 70:
                             continue
 
-                        insts = [a['institution']['display_name'] for a in cand.get('affiliations', [])]
+                        insts = [
+                            (a.get('institution') or {}).get('display_name')
+                            for a in (cand.get('affiliations') or [])
+                            if isinstance(a, dict) and (a.get('institution') or {}).get('display_name')
+                        ]
                         inst_str = ' '.join(insts).lower()
                         has_kse = any(k in inst_str for k in KSE_INSTITUTION_KEYWORDS)
                         has_partner = any(p in inst_str for p in PARTNER_INSTITUTION_KEYWORDS)
@@ -641,10 +712,10 @@ def query_openalex(
                                 w_req = urllib.request.Request(w_url, headers={'User-Agent': POLITE_USER_AGENT})
                                 with urllib.request.urlopen(w_req, timeout=6) as w_resp:
                                     w_data = json.loads(w_resp.read().decode())
-                                    for w_item in w_data.get('results', []):
+                                    for w_item in (w_data.get('results') or []):
                                         w_title = w_item.get('title') or ''
                                         for kw in known_works:
-                                            if fuzz.token_set_ratio(kw.lower(), w_title.lower()) >= 80:
+                                            if match_publication_title(kw, w_title, threshold=75):
                                                 has_work_match = True
                                                 matched_work = kw
                                                 break
@@ -672,18 +743,19 @@ def query_openalex(
     candidates.sort(key=lambda x: (x[1], x[0]), reverse=True)
     best_score, has_kse, best, insts, matched_work = candidates[0]
 
-    author_id = best['id'].split('/')[-1]
-    works_url = f"https://api.openalex.org/works?filter=author.id:{author_id}&per_page=3"
-    wreq = urllib.request.Request(works_url, headers={'User-Agent': POLITE_USER_AGENT})
+    author_id = (best.get('id') or '').split('/')[-1]
     sample_works = []
-    try:
-        with urllib.request.urlopen(wreq, timeout=8) as wresp:
-            wdata = json.loads(wresp.read().decode())
-            sample_works = [w['title'] for w in wdata.get('results', []) if w.get('title')]
-    except Exception:
-        pass
+    if author_id:
+        works_url = f"https://api.openalex.org/works?filter=author.id:{author_id}&per_page=3"
+        wreq = urllib.request.Request(works_url, headers={'User-Agent': POLITE_USER_AGENT})
+        try:
+            with urllib.request.urlopen(wreq, timeout=8) as wresp:
+                wdata = json.loads(wresp.read().decode())
+                sample_works = [w.get('title') for w in (wdata.get('results') or []) if isinstance(w, dict) and w.get('title')]
+        except Exception:
+            pass
 
-    stats = best.get('summary_stats', {})
+    stats = best.get('summary_stats') or {}
     return {
         'openalex_id': best.get('id'),
         'display_name': best.get('display_name'),
@@ -724,10 +796,11 @@ def query_orcid(
         try:
             with urllib.request.urlopen(req, timeout=10) as resp:
                 results = json.loads(resp.read().decode()).get('expanded-result', [])
-                for cand in results[:15]:
-                    cand_given = cand.get('given-names') or ''
-                    cand_family = cand.get('family-names') or ''
-                    cand_insts = cand.get('institution-name', [])
+                for cand in (results or [])[:15]:
+                    cand_given = str(cand.get('given-names') or '')
+                    cand_family = str(cand.get('family-names') or '')
+                    raw_insts = cand.get('institution-name') or []
+                    cand_insts = [str(x) for x in raw_insts if x]
 
                     f_sim = max(
                         fuzz.ratio(v_family.lower(), cand_family.lower()),
@@ -735,6 +808,7 @@ def query_orcid(
                     )
                     g_sim = max(
                         fuzz.ratio(v_given.lower(), cand_given.lower()),
+                        fuzz.token_set_ratio(v_given.lower(), cand_given.lower()),
                         fuzz.ratio(v_family.lower(), cand_given.lower())
                     )
 
@@ -747,15 +821,16 @@ def query_orcid(
                         cand_work_matched = None
                         if known_works:
                             c_id = cand.get('orcid-id')
-                            c_works = fetch_orcid_works(c_id)
-                            for kw in known_works:
-                                for cw in c_works:
-                                    if fuzz.token_set_ratio(kw.lower(), cw.lower()) >= 80:
-                                        cand_work_matched = kw
-                                        score += 250
+                            if c_id:
+                                c_works = fetch_orcid_works(c_id)
+                                for kw in known_works:
+                                    for cw in c_works:
+                                        if match_publication_title(kw, cw, threshold=75):
+                                            cand_work_matched = kw
+                                            score += 250
+                                            break
+                                    if cand_work_matched:
                                         break
-                                if cand_work_matched:
-                                    break
 
                         if score > best_score:
                             best_score = score
@@ -816,7 +891,7 @@ def search_google_scholar_cse(
                         raw_title = item.get("title", "")
                         clean_title = re.sub(r'[\u200e\u200f\u202a-\u202e]', '', raw_title)
                         clean_title = re.sub(r'\s*-\s*Google Scholar.*', '', clean_title, flags=re.IGNORECASE).strip()
-                        snippet = item.get("snippet", "").replace('\n', ' ')
+                        snippet = str(item.get("snippet") or "").replace('\n', ' ')
 
                         cited_by = None
                         cited_m = re.search(r'[Cc]ited by\s*([\d,]+)', snippet)
@@ -848,12 +923,12 @@ def search_google_scholar_cse(
                             }
             elif resp.status_code == 403:
                 err_data = resp.json().get('error', {})
-                print(f"  [Google CSE Notice]: HTTP 403 - {err_data.get('message', 'Quota or key error')}")
+                print(f"  [Google CSE Notice]: HTTP 403 - {err_data.get('message', 'Quota or key error')}", file=sys.stderr)
                 return None
             else:
-                print(f"  [Google CSE Notice]: HTTP {resp.status_code}")
+                print(f"  [Google CSE Notice]: HTTP {resp.status_code}", file=sys.stderr)
         except Exception as e:
-            print(f"  [Google CSE Error for {variant}]: {e}")
+            print(f"  [Google CSE Error for {variant}]: {e}", file=sys.stderr)
             continue
 
     return None
@@ -919,10 +994,10 @@ def search_google_scholar(
                     break
 
                 authors = data.get('profiles', {}).get('authors', [])
-                for a in authors:
-                    cand_name = a.get('name', '')
-                    cand_affil = a.get('affiliations', '')
-                    email = a.get('email', '')
+                for a in (authors or []):
+                    cand_name = str(a.get('name') or '')
+                    cand_affil = str(a.get('affiliations') or '')
+                    email = str(a.get('email') or '')
 
                     # Split multiple author aliases in Scholar name (e.g. 'Ігор Сердюк, Igor Serdiuk')
                     sub_names = [s.strip() for s in re.split(r'[,/;|]', cand_name) if s.strip()]
@@ -963,7 +1038,7 @@ def search_google_scholar(
                             'match_score': min(sim, 100)
                         }
                         # EARLY EXIT: Save paid credits immediately if high-confidence KSE/ground-truth profile found
-                        if (is_kse or has_gt_work) and sim >= 90:
+                        if (is_kse or has_gt_work) and sim >= 85:
                             return cand_obj
                         api_candidates.append(cand_obj)
             elif r and r.status_code == 401:
@@ -1042,6 +1117,19 @@ def process_faculty_member(
     known_orcid: Optional[str] = None,
     known_scholar: Optional[str] = None
 ) -> Dict:
+    if not input_name or not input_name.strip():
+        return {
+            'input_name': input_name or '',
+            'status': 'MISSING / NOT FOUND',
+            'confidence_score': 0,
+            'reasons': ['Empty or whitespace name provided'],
+            'orcid': None,
+            'scholar': None,
+            'scholar_error': None,
+            'metrics': {'h_index': 0, 'citations': 0, 'works_count': 0},
+            'sample_works': []
+        }
+
     if verbose:
         print(f"\n{'='*60}")
         print(f"PROCESSING: {input_name}")
@@ -1135,21 +1223,24 @@ def process_faculty_member(
             scholar_profile = scholar_info
 
     # 3. Affiliation checks for Disambiguation & Anti-Homonym Protection
-    has_kse_orcid = bool(orcid_info and any(any(k in inst.lower() for k in KSE_INSTITUTION_KEYWORDS) for inst in orcid_info.get('institutions', [])))
+    raw_orcid_insts = (orcid_info.get('institutions') or []) if orcid_info else []
+    orcid_insts = [str(inst) for inst in raw_orcid_insts if inst]
+    has_kse_orcid = bool(orcid_info and any(any(k in inst.lower() for k in KSE_INSTITUTION_KEYWORDS) for inst in orcid_insts))
     has_kse_scholar = bool(scholar_profile and (
         any(k in (scholar_profile.get('affiliations') or '').lower() for k in KSE_INSTITUTION_KEYWORDS) or
         'kse.org.ua' in (scholar_profile.get('email_verification') or '').lower() or
-        scholar_profile.get('ground_truth_matched')
+        scholar_profile.get('ground_truth_matched') or
+        scholar_profile.get('is_wikidata_crosslink')
     ))
     has_kse_alex = bool(alex_data and alex_data.get('has_kse_affiliation'))
     has_any_kse = has_kse_orcid or has_kse_scholar or has_kse_alex or is_gt_verified
 
-    has_partner_orcid = bool(orcid_info and any(any(k in inst.lower() for k in PARTNER_INSTITUTION_KEYWORDS) for inst in orcid_info.get('institutions', [])))
+    has_partner_orcid = bool(orcid_info and any(any(k in inst.lower() for k in PARTNER_INSTITUTION_KEYWORDS) for inst in orcid_insts))
     has_partner_scholar = bool(scholar_profile and any(k in (scholar_profile.get('affiliations') or '').lower() for k in PARTNER_INSTITUTION_KEYWORDS))
     has_any_partner = has_partner_orcid or has_partner_scholar
 
-    # Discard non-KSE/non-partner Scholar profile only if NOT a ground truth match
-    if scholar_profile and not (has_kse_scholar or has_partner_scholar or is_gt_verified):
+    # Discard non-KSE/non-partner Scholar profile only if NOT a ground truth match or verified Wikidata crosslink
+    if scholar_profile and not (has_kse_scholar or has_partner_scholar or is_gt_verified or scholar_profile.get('is_wikidata_crosslink')):
         if scholar_profile.get('match_score', 0) < 85:
             scholar_profile = None
 
@@ -1298,20 +1389,33 @@ Examples:
         if not os.path.exists(args.file):
             print(f"Error: File '{args.file}' not found.", file=sys.stderr)
             sys.exit(1)
-        with open(args.file, 'r', encoding='utf-8') as f:
-            content = f.read().strip()
-            if content.startswith('[') and content.endswith(']'):
-                try:
-                    parsed = json.loads(content)
-                    if isinstance(parsed, list):
-                        names_to_process.extend([str(x).strip() for x in parsed if str(x).strip()])
-                except Exception:
-                    pass
-            if not names_to_process:
-                for line in content.splitlines():
-                    cleaned = line.strip().strip(',;"\'')
-                    if cleaned:
-                        names_to_process.append(cleaned)
+        content = ""
+        for enc in ('utf-8-sig', 'utf-8', 'cp1251', 'latin-1'):
+            try:
+                with open(args.file, 'r', encoding=enc) as f:
+                    content = f.read().strip()
+                break
+            except UnicodeDecodeError:
+                continue
+
+        if content.startswith('[') and content.endswith(']'):
+            try:
+                parsed = json.loads(content)
+                if isinstance(parsed, list):
+                    for item in parsed:
+                        if isinstance(item, str) and item.strip():
+                            names_to_process.append(item.strip())
+                        elif isinstance(item, dict):
+                            name_val = item.get('name') or item.get('faculty_name') or item.get('full_name')
+                            if name_val and str(name_val).strip():
+                                names_to_process.append(str(name_val).strip())
+            except Exception:
+                pass
+        if not names_to_process:
+            for line in content.splitlines():
+                cleaned = line.strip().strip(',;"\'')
+                if cleaned:
+                    names_to_process.append(cleaned)
 
     if args.benchmark:
         names_to_process = [
@@ -1344,8 +1448,8 @@ Examples:
         )
         results.append(res)
 
+    output_data = results[0] if len(results) == 1 else results
     if args.json:
-        output_data = results[0] if len(results) == 1 else results
         print(json.dumps(output_data, indent=2, ensure_ascii=False))
     elif not args.quiet:
         print(f"\n{'='*60}")
@@ -1354,7 +1458,7 @@ Examples:
 
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as f:
-            json.dump(results if len(results) > 1 else results[0], f, indent=2, ensure_ascii=False)
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
         if not args.json and not args.quiet:
             print(f"Results successfully saved to {args.output}")
 
