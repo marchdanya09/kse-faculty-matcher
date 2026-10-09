@@ -14,6 +14,29 @@ from rapidfuzz import fuzz
 # ==============================================================================
 # CONFIGURATION & CONSTANTS
 # ==============================================================================
+def _load_dotenv_auto():
+    """Automatically loads variables from .env if present."""
+    candidates = [
+        os.path.join(os.getcwd(), ".env"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    ]
+    for env_path in candidates:
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            k, v = k.strip(), v.strip().strip("'\"")
+                            if k and k not in os.environ:
+                                os.environ[k] = v
+            except Exception:
+                pass
+            break
+
+_load_dotenv_auto()
+
 DEFAULT_SERPAPI_KEY = os.getenv("SERPAPI_API_KEY", "")
 DEFAULT_GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 DEFAULT_GOOGLE_CSE_CX = os.getenv("GOOGLE_CSE_CX", "")
@@ -804,9 +827,13 @@ Examples:
     parser.add_argument('-o', '--output', help="Path to save output JSON file.")
     parser.add_argument('--json', action='store_true', help="Output pure JSON to stdout (suppresses progress logs).")
     parser.add_argument('-q', '--quiet', action='store_true', help="Suppress progress and summary messages.")
+    parser.add_argument('--api-key', dest='api_key', help="SerpAPI key for Google Scholar lookup.")
     parser.add_argument('--benchmark', '--demo', action='store_true', help="Run benchmark on the 9 original test faculty.")
 
     args = parser.parse_args()
+
+    if args.api_key:
+        os.environ['SERPAPI_API_KEY'] = args.api_key
 
     names_to_process = []
     if args.names:
