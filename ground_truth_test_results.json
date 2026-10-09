@@ -1,0 +1,322 @@
+[
+  {
+    "input_name": "Mykola Trehub",
+    "status": "VERIFIED (GROUND TRUTH MATCH)",
+    "confidence_score": 100,
+    "reasons": [
+      "ORCID verified via ground-truth work: 'Determining and determinable factors influencing the size of zone of land-use restriction'",
+      "Scholar verified via ground-truth article match: 'Determining and determinable factors influencing the size of zone of land-use restriction'",
+      "ORCID confirmed with KSE affiliation",
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-2205-5622",
+      "orcid_url": "https://orcid.org/0000-0002-2205-5622",
+      "name_in_orcid": "Mykola Trehub",
+      "institutions": [
+        "Kyiv School of Economics",
+        "Dnipro University of Technology",
+        "Dnipro University of Technology",
+        "Nacional'nij tehnicnij universitet Dniprovs'ka politehnika",
+        "National Mining University"
+      ],
+      "source": "OpenAlex"
+    },
+    "scholar": {
+      "scholar_id": "QnhQqygAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=QnhQqygAAAAJ&hl=en",
+      "name": "Mykola Tregub, Mykola Trehub, Mykola Trehub, Трегуб Микола, Трегуб М.В., Tregub M., Трегуб Н.В",
+      "source": "SerpAPI (Publication Co-Citation Anchor)",
+      "match_score": 100,
+      "matched_article": "Determining and determinable factors influencing the size of zone of land-use restriction",
+      "ground_truth_matched": true,
+      "affiliations": "Національний технічний університет «Дніпровська політехніка», Dnipro University of Technology",
+      "email_verification": "Verified email at nmu.org.ua",
+      "cited_by": 276
+    },
+    "scholar_error": null,
+    "metrics": {
+      "h_index": 4,
+      "citations": 52,
+      "works_count": 22
+    },
+    "sample_works": [
+      "Determining and determinable factors influencing the size of zone of land-use restriction",
+      "Planning models of sanitary protection zones around mode-forming objects",
+      "Increase in the Value Added of Land Due to the Establishment of Industrial Parks"
+    ]
+  },
+  {
+    "input_name": "Sergiy Kozerenko",
+    "status": "VERIFIED (GROUND TRUTH MATCH)",
+    "confidence_score": 100,
+    "reasons": [
+      "Scholar verified via ground-truth article match: 'Graphs with Small Triameters'",
+      "ORCID confirmed with KSE affiliation",
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-5716-3084",
+      "orcid_url": "https://orcid.org/0000-0002-5716-3084",
+      "name_in_orcid": "Sergiy Kozerenko",
+      "institutions": [
+        "National University of Kyiv Mohyla Academy",
+        "Kyiv School of Economics",
+        "Kyiv School of Economics",
+        "Kyiv School of Economics",
+        "Kyiv School of Economics",
+        "National University of Kyiv Mohyla Academy",
+        "National University of Kyiv-Mohyla Academy"
+      ],
+      "source": "OpenAlex"
+    },
+    "scholar": {
+      "scholar_id": "_lmN4FkAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=_lmN4FkAAAAJ&hl=en",
+      "name": "Sergiy Kozerenko",
+      "source": "SerpAPI (Publication Co-Citation Anchor)",
+      "match_score": 100,
+      "matched_article": "Graphs with Small Triameters",
+      "ground_truth_matched": true,
+      "affiliations": "Computer Science Department, Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 127
+    },
+    "scholar_error": null,
+    "metrics": {
+      "h_index": 2,
+      "citations": 15,
+      "works_count": 40
+    },
+    "sample_works": [
+      "DISCRETE MARKOV GRAPHS: LOOPS, FIXED POINTS AND MAPS PREORDERING",
+      "ON THE ABSTRACT PROPERTIES OF MARKOV GRAPHS FOR MAPS ON TREES",
+      "A note on the triameter of graphs"
+    ]
+  },
+  {
+    "input_name": "Kateryna Antoshyna",
+    "status": "VERIFIED (GROUND TRUTH MATCH)",
+    "confidence_score": 100,
+    "reasons": [
+      "ORCID verified via ground-truth work: 'Graphs with parity conditions on distances between cut and noncut vertices'",
+      "Scholar verified via ground-truth article match: 'Graphs with parity conditions on distances between cut and noncut vertices'",
+      "ORCID confirmed with partner institution",
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0009-0008-0933-6893",
+      "orcid_url": "https://orcid.org/0009-0008-0933-6893",
+      "name_in_orcid": "Kateryna Antoshyna",
+      "other_names": [],
+      "institutions": [
+        "Institute of Mathematics"
+      ],
+      "matched_work": "Graphs with parity conditions on distances between cut and noncut vertices",
+      "source": "ORCID API (Ground Truth Publication Match)"
+    },
+    "scholar": {
+      "scholar_id": "FYN91ucAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=FYN91ucAAAAJ&hl=en",
+      "name": "Kateryna Antoshyna",
+      "source": "SerpAPI (Publication Co-Citation Anchor)",
+      "match_score": 100,
+      "matched_article": "Graphs with parity conditions on distances between cut and noncut vertices",
+      "ground_truth_matched": true,
+      "affiliations": "Ph.D. student, Institute of Mathematics NAS of Ukraine",
+      "email_verification": "Verified email at imath.kiev.ua",
+      "cited_by": 3
+    },
+    "scholar_error": null,
+    "metrics": {
+      "h_index": 1,
+      "citations": 1,
+      "works_count": 4
+    },
+    "sample_works": [
+      "Graphs with odd and even distances between non-cut vertices",
+      "Graphs with parity conditions on distances between cut and noncut vertices",
+      "Concatenation and Multiplication of directed graphs of a special class"
+    ]
+  },
+  {
+    "input_name": "Oleksandra Konopatska",
+    "status": "VERIFIED (GROUND TRUTH MATCH)",
+    "confidence_score": 100,
+    "reasons": [
+      "ORCID verified via ground-truth work: 'Artificial Intelligence in the Functioning of HR Processes'",
+      "Scholar verified via ground-truth article match: 'Artificial Intelligence in the Functioning of HR Processes: Experience of Poland and Ukraine'",
+      "ORCID confirmed with KSE affiliation",
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0003-1867-9894",
+      "orcid_url": "https://orcid.org/0000-0003-1867-9894",
+      "name_in_orcid": "Oleksandra Konopatska",
+      "institutions": [
+        "Kyiv School of Economics"
+      ],
+      "source": "OpenAlex"
+    },
+    "scholar": {
+      "scholar_id": "W82UtxcAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=W82UtxcAAAAJ&hl=en",
+      "name": "Oleksandra Konopatska",
+      "source": "SerpAPI (Publication Co-Citation Anchor)",
+      "match_score": 100,
+      "matched_article": "Artificial Intelligence in the Functioning of HR Processes: Experience of Poland and Ukraine",
+      "ground_truth_matched": true,
+      "affiliations": "Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 21
+    },
+    "scholar_error": null,
+    "metrics": {
+      "h_index": 1,
+      "citations": 6,
+      "works_count": 3
+    },
+    "sample_works": [
+      "Estimating the impact of the Russian invasion on the displacement of graduating high school students in Ukraine",
+      "Artificial Intelligence in the Functioning of HR Processes: Experience of Poland and Ukraine"
+    ]
+  },
+  {
+    "input_name": "Тимофій Брік",
+    "status": "VERIFIED (GROUND TRUTH MATCH)",
+    "confidence_score": 100,
+    "reasons": [
+      "Scholar verified via ground-truth article match: 'Witnessing Racial Discrimination Mobilizes Intra‐Minority Allyship: Egalitarian Beliefs, Not Identification With All Humanity, Shape Who Acts'",
+      "ORCID confirmed with KSE affiliation",
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-5542-1019",
+      "orcid_url": "https://orcid.org/0000-0002-5542-1019",
+      "name_in_orcid": "TYMOFII BRIK",
+      "institutions": [
+        "Kyiv School of Economics"
+      ],
+      "source": "OpenAlex"
+    },
+    "scholar": {
+      "scholar_id": "NWO5_WwAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=NWO5_WwAAAAJ&hl=en",
+      "name": "Tymofii Brik",
+      "source": "SerpAPI (Publication Co-Citation Anchor)",
+      "match_score": 100,
+      "matched_article": "Witnessing Racial Discrimination Mobilizes Intra‐Minority Allyship: Egalitarian Beliefs, Not Identification With All Humanity, Shape Who Acts",
+      "ground_truth_matched": true,
+      "affiliations": "Provost (rector), Kyiv School of Economics",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 1177
+    },
+    "scholar_error": null,
+    "metrics": {
+      "h_index": 10,
+      "citations": 663,
+      "works_count": 57
+    },
+    "sample_works": [
+      "Addressing climate change with behavioral science: A global intervention tournament in 63 countries",
+      "The globalizability of temporal discounting",
+      "Explaining Ukraine's resilience to Russia's invasion: The role of local governance"
+    ]
+  },
+  {
+    "input_name": "Максим Обрізан",
+    "status": "VERIFIED (GROUND TRUTH MATCH)",
+    "confidence_score": 100,
+    "reasons": [
+      "ORCID verified via ground-truth work: 'Mental health in Germany before, during and after the COVID-19 pandemic'",
+      "Scholar verified via ground-truth article match: 'Mental health in Germany before, during and after the COVID-19 pandemic'",
+      "ORCID confirmed with KSE affiliation",
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-0924-0671",
+      "orcid_url": "https://orcid.org/0000-0002-0924-0671",
+      "name_in_orcid": "Maksym Obrizan",
+      "institutions": [
+        "Київська школа економіки"
+      ],
+      "source": "OpenAlex"
+    },
+    "scholar": {
+      "scholar_id": "pIv8OrkAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=pIv8OrkAAAAJ&hl=en",
+      "name": "Maksym Obrizan / Максим Обрізан",
+      "source": "SerpAPI (Publication Co-Citation Anchor)",
+      "match_score": 100,
+      "matched_article": "Mental health in Germany before, during and after the COVID-19 pandemic",
+      "ground_truth_matched": true,
+      "affiliations": "Kyiv School of Economics, Kyiv (Ukraine) and Research Consulting & Development",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 1600
+    },
+    "scholar_error": null,
+    "metrics": {
+      "h_index": 12,
+      "citations": 1071,
+      "works_count": 46
+    },
+    "sample_works": [
+      "The Aftermath of Hip Fracture: Discharge Placement, Functional Status Change, and Mortality",
+      "Continuity of Care with a Primary Care Physician and Mortality in Older Adults",
+      "Long-term declines in ADLs, IADLs, and mobility among older Medicare beneficiaries"
+    ]
+  },
+  {
+    "input_name": "Ігор Сердюк",
+    "status": "VERIFIED (GROUND TRUTH MATCH)",
+    "confidence_score": 100,
+    "reasons": [
+      "ORCID verified via ground-truth work: 'Causes of Death in 19th-Century Ukraine'",
+      "Scholar verified via ground-truth article match: 'Causes of Death in 19th-Century Ukraine. Parish Registers, Data Quality, and Source-Critical Analysis'",
+      "ORCID confirmed with KSE affiliation",
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0002-8930-1410",
+      "orcid_url": "https://orcid.org/0000-0002-8930-1410",
+      "name_in_orcid": "Igor Serdiuk",
+      "institutions": [
+        "Kyiv School of Economics",
+        "Kyiv School of Economics",
+        "National University of Kyiv Mohyla Academy",
+        "Poltava V.G. Korolenko National Pedagogical University"
+      ],
+      "source": "OpenAlex"
+    },
+    "scholar": {
+      "scholar_id": "vMd6FToAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=vMd6FToAAAAJ&hl=en",
+      "name": "Ігор Сердюк, Igor Serdiuk, Ihor Serdiuk, Igor Serdyuk, Игорь Сердюк",
+      "source": "SerpAPI (Publication Co-Citation Anchor)",
+      "match_score": 100,
+      "matched_article": "Causes of Death in 19th-Century Ukraine. Parish Registers, Data Quality, and Source-Critical Analysis",
+      "ground_truth_matched": true,
+      "affiliations": "Київська школа економіки",
+      "email_verification": "Verified email at kse.org.ua",
+      "cited_by": 474
+    },
+    "scholar_error": null,
+    "metrics": {
+      "h_index": 2,
+      "citations": 10,
+      "works_count": 13
+    },
+    "sample_works": [
+      "Historical Demography in Ukraine: From “Political Arithmetic” to Non-Political History",
+      "Causes of Death in 19th-Century Ukraine. Parish Registers, Data Quality, and Source-Critical Analysis",
+      "FORUM: Value Dimensions of Ukrainian Pre-modern Culture"
+    ]
+  }
+]

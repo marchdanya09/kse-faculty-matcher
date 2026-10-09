@@ -7,6 +7,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Dict, List, Optional
@@ -342,10 +343,241 @@ def get_scholar_from_wikidata(orcid: str) -> Optional[Dict]:
         pass
     return None
 
+def fetch_orcid_works(orcid_id: str) -> List[str]:
+    """Retrieves titles of public works from an ORCID iD. 100% free, official public API."""
+    if not orcid_id:
+        return []
+    clean_id = orcid_id.split('/')[-1].strip()
+    url = f"https://pub.orcid.org/v3.0/{clean_id}/works"
+    req = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": POLITE_USER_AGENT}
+    )
+    works = []
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            for group in data.get("group", []):
+                for summary in group.get("work-summary", []):
+                    title_obj = summary.get("title", {}).get("title", {})
+                    t_val = title_obj.get("value")
+                    if t_val and t_val.strip():
+                        works.append(t_val.strip())
+    except Exception:
+        pass
+    return works
+
+def resolve_direct_orcid(orcid_input: str) -> Optional[Dict]:
+    """Directly resolves a pre-known ORCID iD or URL."""
+    if not orcid_input:
+        return None
+    m = re.search(r'(\d{4}-\d{4}-\d{4}-[\dX]{4})', orcid_input)
+    if not m:
+        return None
+    clean_id = m.group(1)
+    url = f"https://pub.orcid.org/v3.0/{clean_id}/record"
+    req = urllib.request.Request(
+        url,
+        headers={"Accept": "application/json", "User-Agent": POLITE_USER_AGENT}
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            person = data.get("person", {})
+            name_obj = person.get("name", {})
+            given = (name_obj.get("given-names") or {}).get("value", "")
+            family = (name_obj.get("family-name") or {}).get("value", "")
+            full_name = f"{given} {family}".strip()
+
+            insts = []
+            affils = data.get("activities-summary", {}).get("employments", {}).get("affiliation-group", [])
+            for aff in affils:
+                for sum_item in aff.get("summaries", []):
+                    emp = sum_item.get("employment-summary", {})
+                    org = emp.get("organization", {}).get("name")
+                    if org:
+                        insts.append(org)
+
+            return {
+                'orcid_id': clean_id,
+                'orcid_url': f"https://orcid.org/{clean_id}",
+                'name_in_orcid': full_name,
+                'institutions': insts,
+                'source': 'ORCID (Direct Ground Truth Anchor)'
+            }
+    except urllib.error.HTTPError as e:
+        if e.code in (404, 409, 410):
+            return None
+        return {
+            'orcid_id': clean_id,
+            'orcid_url': f"https://orcid.org/{clean_id}",
+            'source': 'ORCID (Direct Ground Truth Anchor)'
+        }
+    except Exception:
+        return {
+            'orcid_id': clean_id,
+            'orcid_url': f"https://orcid.org/{clean_id}",
+            'source': 'ORCID (Direct Ground Truth Anchor)'
+        }
+
+def resolve_direct_scholar(scholar_input: str, serpapi_key: Optional[str] = None) -> Optional[Dict]:
+    """Directly resolves a pre-known Google Scholar ID or URL via SerpAPI."""
+    if not scholar_input:
+        return None
+    m = re.search(r'user=([a-zA-Z0-9_\-]+)', scholar_input)
+    scholar_id = m.group(1) if m else scholar_input.strip()
+    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+
+    cand_obj = {
+        'scholar_id': scholar_id,
+        'profile_url': f"https://scholar.google.com/citations?user={scholar_id}&hl=en",
+        'source': 'Google Scholar (Direct Ground Truth Anchor)',
+        'match_score': 100
+    }
+    if not serpapi_key:
+        return cand_obj
+
+    try:
+        r = requests.get('https://serpapi.com/search.json', params={
+            'engine': 'google_scholar_author',
+            'author_id': scholar_id,
+            'api_key': serpapi_key
+        }, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            author = data.get('author', {})
+            cand_obj['name'] = author.get('name', '')
+            cand_obj['affiliations'] = author.get('affiliations', '')
+            cand_obj['email_verification'] = author.get('email', '')
+            cited_all = data.get('cited_by', {}).get('table', [{}])[0].get('citations', {}).get('all')
+            if cited_all is not None:
+                cand_obj['cited_by'] = cited_all
+            cand_obj['articles'] = [a.get('title') for a in data.get('articles', []) if a.get('title')]
+    except Exception:
+        pass
+    return cand_obj
+
+def search_scholar_by_article(
+    author_name: str,
+    article_title: str,
+    name_variants: Optional[List[str]] = None,
+    serpapi_key: Optional[str] = None
+) -> Optional[Dict]:
+    """Finds Google Scholar profile by querying an article title and matching author link in citations."""
+    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+    if not serpapi_key or not article_title:
+        return None
+
+    variants = name_variants or generate_name_variants(author_name)
+    params = {
+        'engine': 'google_scholar',
+        'q': f"{author_name} {article_title}".strip(),
+        'api_key': serpapi_key
+    }
+    try:
+        r = requests.get('https://serpapi.com/search.json', params=params, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            for item in data.get('organic_results', []):
+                item_title = item.get('title', '')
+                title_sim = fuzz.token_set_ratio(article_title.lower(), item_title.lower())
+                if title_sim < 70:
+                    continue
+                # Inspect authors listed in publication_info
+                pub_info = item.get('publication_info', {})
+                authors = pub_info.get('authors', [])
+                for a in authors:
+                    a_name = a.get('name', '')
+                    a_id = a.get('author_id')
+                    link = a.get('link', '')
+                    if not a_id and 'user=' in link:
+                        m = re.search(r'user=([a-zA-Z0-9_\-]+)', link)
+                        if m:
+                            a_id = m.group(1)
+
+                    if not a_id:
+                        continue
+
+                    # Check name similarity with our author name variants
+                    name_sim = max(fuzz.token_sort_ratio(v, a_name) for v in variants)
+                    # Short initials match like 'M Trehub' or 'V Priamitsyn'
+                    if name_sim < 70:
+                        parts = a_name.split()
+                        if len(parts) >= 2:
+                            surname = parts[-1]
+                            initial = parts[0][0].upper()
+                            for v in variants:
+                                v_parts = v.split()
+                                if len(v_parts) >= 2 and v_parts[-1].lower() == surname.lower() and v_parts[0][0].upper() == initial:
+                                    name_sim = 85
+                                    break
+
+                    if name_sim >= 70:
+                        cand_obj = {
+                            'scholar_id': a_id,
+                            'profile_url': f"https://scholar.google.com/citations?user={a_id}&hl=en",
+                            'name': a_name,
+                            'source': 'SerpAPI (Publication Co-Citation Anchor)',
+                            'match_score': 100,
+                            'matched_article': item_title,
+                            'ground_truth_matched': True
+                        }
+                        # Fetch full profile info for clean affiliations and citation counts
+                        try:
+                            prof_r = requests.get('https://serpapi.com/search.json', params={
+                                'engine': 'google_scholar_author',
+                                'author_id': a_id,
+                                'api_key': serpapi_key
+                            }, timeout=8)
+                            if prof_r.status_code == 200:
+                                p_data = prof_r.json().get('author', {})
+                                cand_obj['affiliations'] = p_data.get('affiliations', '')
+                                cand_obj['email_verification'] = p_data.get('email', '')
+                                cand_obj['cited_by'] = prof_r.json().get('cited_by', {}).get('table', [{}])[0].get('citations', {}).get('all')
+                                if p_data.get('name'):
+                                    cand_obj['name'] = p_data.get('name')
+                        except Exception:
+                            pass
+                        return cand_obj
+    except Exception:
+        pass
+    return None
+
+def verify_scholar_candidate_works(
+    scholar_id: str,
+    known_works: List[str],
+    serpapi_key: Optional[str] = None
+) -> Optional[str]:
+    """Checks if a Scholar candidate's profile contains any of the known publication titles."""
+    if not scholar_id or not known_works:
+        return None
+    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+    if not serpapi_key:
+        return None
+    try:
+        r = requests.get('https://serpapi.com/search.json', params={
+            'engine': 'google_scholar_author',
+            'author_id': scholar_id,
+            'api_key': serpapi_key,
+            'num': 20
+        }, timeout=8)
+        if r.status_code == 200:
+            articles = [a.get('title', '') for a in r.json().get('articles', []) if a.get('title')]
+            for kw in known_works:
+                for art in articles:
+                    if fuzz.token_set_ratio(kw.lower(), art.lower()) >= 80:
+                        return art
+    except Exception:
+        pass
+    return None
+
 # ==============================================================================
 # 3. OPENALEX API (DISAMBIGUATED WITH POLITE POOL)
 # ==============================================================================
-def query_openalex(name_variants: List[str]) -> Optional[Dict]:
+def query_openalex(
+    name_variants: List[str],
+    known_works: Optional[List[str]] = None
+) -> Optional[Dict]:
     """Queries OpenAlex author search API across variants and ranks candidates by affiliation & name match."""
     seen_ids = set()
     candidates = []
@@ -376,21 +608,45 @@ def query_openalex(name_variants: List[str]) -> Optional[Dict]:
                         has_kse = any(k in inst_str for k in KSE_INSTITUTION_KEYWORDS)
                         has_partner = any(p in inst_str for p in PARTNER_INSTITUTION_KEYWORDS)
 
+                        has_work_match = False
+                        matched_work = None
+                        if known_works:
+                            c_auth_id = cid.split('/')[-1]
+                            try:
+                                w_url = f"https://api.openalex.org/works?filter=author.id:{c_auth_id}&per_page=10"
+                                w_req = urllib.request.Request(w_url, headers={'User-Agent': POLITE_USER_AGENT})
+                                with urllib.request.urlopen(w_req, timeout=6) as w_resp:
+                                    w_data = json.loads(w_resp.read().decode())
+                                    for w_item in w_data.get('results', []):
+                                        w_title = w_item.get('title') or ''
+                                        for kw in known_works:
+                                            if fuzz.token_set_ratio(kw.lower(), w_title.lower()) >= 80:
+                                                has_work_match = True
+                                                matched_work = kw
+                                                break
+                                        if has_work_match:
+                                            break
+                            except Exception:
+                                pass
+
                         score = name_sim + (50 if has_kse else (25 if has_partner else 0))
-                        candidates.append((score, has_kse, cand, insts))
+                        if has_work_match:
+                            score += 200
+
+                        candidates.append((score, has_kse or has_work_match, cand, insts, matched_work))
                 break
             except Exception:
                 time.sleep(0.5 * (attempt + 1))
 
-        # Early exit if a verified KSE author is found
-        if any(c[1] and c[0] >= 140 for c in candidates):
+        # Early exit if a verified KSE author or ground-truth work author is found
+        if any(c[0] >= 140 for c in candidates):
             break
 
     if not candidates:
         return None
 
     candidates.sort(key=lambda x: (x[1], x[0]), reverse=True)
-    best_score, has_kse, best, insts = candidates[0]
+    best_score, has_kse, best, insts, matched_work = candidates[0]
 
     author_id = best['id'].split('/')[-1]
     works_url = f"https://api.openalex.org/works?filter=author.id:{author_id}&per_page=3"
@@ -413,14 +669,18 @@ def query_openalex(name_variants: List[str]) -> Optional[Dict]:
         'works_count': best.get('works_count', 0),
         'cited_by_count': best.get('cited_by_count', 0),
         'h_index': stats.get('h_index', 0),
-        'sample_works': sample_works
+        'sample_works': sample_works,
+        'matched_work': matched_work
     }
 
 # ==============================================================================
 # 4. DIRECT ORCID API (STRICT HOMONYM PROTECTION)
 # ==============================================================================
-def query_orcid(name_variants: List[str]) -> Optional[Dict]:
-    """Queries ORCID Public API with strict surname and given name matching to prevent false positives."""
+def query_orcid(
+    name_variants: List[str],
+    known_works: Optional[List[str]] = None
+) -> Optional[Dict]:
+    """Queries ORCID Public API with strict surname, given name, and optional publication matching."""
     best_match = None
     best_score = -1
 
@@ -460,6 +720,19 @@ def query_orcid(name_variants: List[str]) -> Optional[Dict]:
                         has_kse = any(k in inst_str for k in KSE_INSTITUTION_KEYWORDS)
                         score = f_sim + g_sim + (50 if has_kse else 0)
 
+                        cand_work_matched = None
+                        if known_works:
+                            c_id = cand.get('orcid-id')
+                            c_works = fetch_orcid_works(c_id)
+                            for kw in known_works:
+                                for cw in c_works:
+                                    if fuzz.token_set_ratio(kw.lower(), cw.lower()) >= 80:
+                                        cand_work_matched = kw
+                                        score += 250
+                                        break
+                                if cand_work_matched:
+                                    break
+
                         if score > best_score:
                             best_score = score
                             best_match = {
@@ -467,9 +740,10 @@ def query_orcid(name_variants: List[str]) -> Optional[Dict]:
                                 'orcid_url': f"https://orcid.org/{cand.get('orcid-id')}",
                                 'name_in_orcid': f"{cand_given} {cand_family}".strip(),
                                 'other_names': cand.get('other-name', []),
-                                'institutions': cand_insts
+                                'institutions': cand_insts,
+                                'matched_work': cand_work_matched
                             }
-                            if has_kse:
+                            if has_kse or cand_work_matched:
                                 return best_match
         except Exception:
             continue
@@ -565,16 +839,25 @@ def search_google_scholar(
     sample_works: List[str] = None,
     google_api_key: Optional[str] = None,
     google_cse_cx: Optional[str] = None,
-    serpapi_key: Optional[str] = None
+    serpapi_key: Optional[str] = None,
+    known_works: Optional[List[str]] = None
 ) -> Optional[Dict]:
     """Finds Google Scholar profile URL across Google CSE (Free Tier), SerpAPI, and Web Search."""
+    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+
+    # 0. Tier 0: Direct ground-truth article co-citation lookup if known_works provided
+    if known_works and serpapi_key:
+        for kw in known_works[:2]:
+            art_cand = search_scholar_by_article(name_variants[0], kw, name_variants=name_variants, serpapi_key=serpapi_key)
+            if art_cand:
+                return art_cand
+
     # 1. Tier 2: Google Programmable Search Engine (100 Free queries/day)
     cse_result = search_google_scholar_cse(name_variants, api_key=google_api_key, cx=google_cse_cx)
     if cse_result:
         return cse_result
 
     # 2. Tier 3: SerpAPI with Early Exit (Paid / Free Monthly Credits)
-    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
     if not serpapi_key:
         return {
             'error': True,
@@ -626,7 +909,15 @@ def search_google_scholar(
                     )
                     is_partner = any(p in cand_affil.lower() for p in PARTNER_INSTITUTION_KEYWORDS)
 
-                    if is_kse:
+                    # Check if candidate has ground-truth work
+                    has_gt_work = False
+                    if known_works and sim >= 70:
+                        matched_art = verify_scholar_candidate_works(a.get('author_id'), known_works, serpapi_key=serpapi_key)
+                        if matched_art:
+                            has_gt_work = True
+                            sim = 100
+
+                    if is_kse or has_gt_work:
                         sim += 25
                     elif is_partner:
                         sim += 10
@@ -641,13 +932,14 @@ def search_google_scholar(
                             'name': cand_name,
                             'affiliations': cand_affil,
                             'email_verification': email,
-                            'is_kse_affiliated': is_kse,
+                            'is_kse_affiliated': is_kse or has_gt_work,
+                            'ground_truth_matched': has_gt_work,
                             'cited_by': a.get('cited_by'),
-                            'source': 'SerpAPI (Google Scholar Engine)',
+                            'source': 'SerpAPI (Verified Ground Truth Publication)' if has_gt_work else 'SerpAPI (Google Scholar Engine)',
                             'match_score': min(sim, 100)
                         }
-                        # EARLY EXIT: Save paid credits immediately if high-confidence KSE profile found
-                        if is_kse and sim >= 90:
+                        # EARLY EXIT: Save paid credits immediately if high-confidence KSE/ground-truth profile found
+                        if (is_kse or has_gt_work) and sim >= 90:
                             return cand_obj
                         api_candidates.append(cand_obj)
             elif r.status_code == 401:
@@ -713,44 +1005,94 @@ def search_google_scholar(
 def process_faculty_member(
     input_name: str,
     verbose: bool = True,
-    serpapi_key: Optional[str] = None
+    serpapi_key: Optional[str] = None,
+    known_works: Optional[List[str]] = None,
+    known_orcid: Optional[str] = None,
+    known_scholar: Optional[str] = None
 ) -> Dict:
     if verbose:
         print(f"\n{'='*60}")
         print(f"PROCESSING: {input_name}")
         print(f"{'='*60}")
 
+    clean_works = [w.strip() for w in (known_works or []) if w and w.strip()]
     variants = generate_name_variants(input_name)
     if verbose:
         print(f"  Aliases considered: {variants[:4]}")
+        if clean_works:
+            print(f"  Ground-truth work(s): {clean_works}")
+        if known_orcid:
+            print(f"  Ground-truth ORCID: {known_orcid}")
+        if known_scholar:
+            print(f"  Ground-truth Scholar: {known_scholar}")
 
-    # 1. OpenAlex lookup
-    alex_data = query_openalex(variants)
-    orcid_from_alex = alex_data.get('orcid') if alex_data else None
-    sample_works = alex_data.get('sample_works', []) if alex_data else []
+    gt_reasons = []
+    is_gt_verified = False
 
-    # 2. ORCID resolution
+    # 1. ORCID Resolution (Direct Anchor -> OpenAlex with works -> Direct ORCID with works)
     orcid_info = None
-    if orcid_from_alex:
-        orcid_id = orcid_from_alex.split('/')[-1]
-        orcid_info = {
-            'orcid_id': orcid_id,
-            'orcid_url': orcid_from_alex,
-            'source': 'OpenAlex'
-        }
-    else:
-        direct_orcid = query_orcid(variants)
-        if direct_orcid:
-            direct_orcid['source'] = 'ORCID API (Direct search)'
-            orcid_info = direct_orcid
+    if known_orcid:
+        orcid_info = resolve_direct_orcid(known_orcid)
+        if orcid_info:
+            is_gt_verified = True
+            gt_reasons.append(f"ORCID anchored directly from ground-truth input: {orcid_info.get('orcid_id')}")
 
-    # 3. Google Scholar resolution (Tier 1: Wikidata SPARQL -> Tier 2: SerpAPI / Search)
+    alex_data = None
+    sample_works = []
+    if not orcid_info:
+        alex_data = query_openalex(variants, known_works=clean_works)
+        sample_works = alex_data.get('sample_works', []) if alex_data else []
+        if alex_data and alex_data.get('orcid'):
+            candidate_orcid = alex_data['orcid'].split('/')[-1]
+            verified_alex_orcid = resolve_direct_orcid(candidate_orcid)
+            if verified_alex_orcid:
+                orcid_info = {
+                    'orcid_id': candidate_orcid,
+                    'orcid_url': alex_data['orcid'],
+                    'name_in_orcid': verified_alex_orcid.get('name_in_orcid', ''),
+                    'institutions': verified_alex_orcid.get('institutions', []),
+                    'source': 'OpenAlex'
+                }
+                if alex_data.get('matched_work'):
+                    is_gt_verified = True
+                    gt_reasons.append(f"ORCID verified via ground-truth work: '{alex_data['matched_work']}'")
+        if not orcid_info:
+            direct_orcid = query_orcid(variants, known_works=clean_works)
+            if direct_orcid:
+                direct_orcid['source'] = 'ORCID API (Direct search)'
+                if direct_orcid.get('matched_work'):
+                    is_gt_verified = True
+                    direct_orcid['source'] = 'ORCID API (Ground Truth Publication Match)'
+                    gt_reasons.append(f"ORCID verified via ground-truth work: '{direct_orcid['matched_work']}'")
+                orcid_info = direct_orcid
+    else:
+        # If orcid_info was provided directly, also fetch OpenAlex metrics if possible
+        alex_data = query_openalex(variants, known_works=clean_works)
+        sample_works = alex_data.get('sample_works', []) if alex_data else []
+
+    # 2. Google Scholar resolution (Direct Anchor -> Wikidata SPARQL -> Article/Scholar Search)
     scholar_info = None
-    if orcid_info and orcid_info.get('orcid_id'):
+    if known_scholar:
+        scholar_info = resolve_direct_scholar(known_scholar, serpapi_key=serpapi_key)
+        if scholar_info:
+            is_gt_verified = True
+            gt_reasons.append(f"Scholar anchored directly from ground-truth input: {scholar_info.get('scholar_id')}")
+
+    if not scholar_info and orcid_info and orcid_info.get('orcid_id'):
         scholar_info = get_scholar_from_wikidata(orcid_info['orcid_id'])
 
     if not scholar_info:
-        scholar_info = search_google_scholar(variants, sample_works, serpapi_key=serpapi_key)
+        scholar_info = search_google_scholar(
+            variants,
+            sample_works,
+            serpapi_key=serpapi_key,
+            known_works=clean_works
+        )
+        if scholar_info and not scholar_info.get('error'):
+            if scholar_info.get('ground_truth_matched') or scholar_info.get('matched_article'):
+                is_gt_verified = True
+                m_art = scholar_info.get('matched_article') or (clean_works[0] if clean_works else 'known work')
+                gt_reasons.append(f"Scholar verified via ground-truth article match: '{m_art}'")
 
     scholar_error = None
     scholar_profile = None
@@ -760,21 +1102,22 @@ def process_faculty_member(
         else:
             scholar_profile = scholar_info
 
-    # 4. Affiliation checks for Disambiguation & Anti-Homonym Protection
+    # 3. Affiliation checks for Disambiguation & Anti-Homonym Protection
     has_kse_orcid = bool(orcid_info and any(any(k in inst.lower() for k in KSE_INSTITUTION_KEYWORDS) for inst in orcid_info.get('institutions', [])))
     has_kse_scholar = bool(scholar_profile and (
         any(k in (scholar_profile.get('affiliations') or '').lower() for k in KSE_INSTITUTION_KEYWORDS) or
-        'kse.org.ua' in (scholar_profile.get('email_verification') or '').lower()
+        'kse.org.ua' in (scholar_profile.get('email_verification') or '').lower() or
+        scholar_profile.get('ground_truth_matched')
     ))
     has_kse_alex = bool(alex_data and alex_data.get('has_kse_affiliation'))
-    has_any_kse = has_kse_orcid or has_kse_scholar or has_kse_alex
+    has_any_kse = has_kse_orcid or has_kse_scholar or has_kse_alex or is_gt_verified
 
     has_partner_orcid = bool(orcid_info and any(any(k in inst.lower() for k in PARTNER_INSTITUTION_KEYWORDS) for inst in orcid_info.get('institutions', [])))
     has_partner_scholar = bool(scholar_profile and any(k in (scholar_profile.get('affiliations') or '').lower() for k in PARTNER_INSTITUTION_KEYWORDS))
     has_any_partner = has_partner_orcid or has_partner_scholar
 
-    # Discard non-KSE/non-partner Scholar profile if it was just a weak homonym match
-    if scholar_profile and not (has_kse_scholar or has_partner_scholar):
+    # Discard non-KSE/non-partner Scholar profile only if NOT a ground truth match
+    if scholar_profile and not (has_kse_scholar or has_partner_scholar or is_gt_verified):
         if scholar_profile.get('match_score', 0) < 85:
             scholar_profile = None
 
@@ -809,8 +1152,12 @@ def process_faculty_member(
         confidence += 10
         reasons.append("KSE affiliation verified in OpenAlex")
 
-    # Status Determination: VERIFIED (AUTO) strictly requires confirmed KSE or partner affiliation
-    if confidence >= 80 and (has_any_kse or has_any_partner):
+    # Status Determination:
+    if is_gt_verified and (orcid_info or scholar_profile):
+        status = "VERIFIED (GROUND TRUTH MATCH)"
+        confidence = 100
+        reasons = gt_reasons + reasons
+    elif confidence >= 80 and (has_any_kse or has_any_partner):
         status = "VERIFIED (AUTO)"
     elif confidence >= 40:
         if not (has_any_kse or has_any_partner):
@@ -899,6 +1246,9 @@ Examples:
     parser.add_argument('-o', '--output', help="Path to save output JSON file.")
     parser.add_argument('--json', action='store_true', help="Output pure JSON to stdout (suppresses progress logs).")
     parser.add_argument('-q', '--quiet', action='store_true', help="Suppress progress and summary messages.")
+    parser.add_argument('-w', '--work', action='append', dest='known_works', help="Known scientific publication title (can be repeated).")
+    parser.add_argument('--orcid', dest='known_orcid', help="Known ORCID iD or URL.")
+    parser.add_argument('--scholar', dest='known_scholar', help="Known Google Scholar user ID or URL.")
     parser.add_argument('--api-key', dest='api_key', help="SerpAPI key for Google Scholar lookup.")
     parser.add_argument('--benchmark', '--demo', action='store_true', help="Run benchmark on the 9 original test faculty.")
 
@@ -952,7 +1302,14 @@ Examples:
 
     results = []
     for name in names_to_process:
-        res = process_faculty_member(name, verbose=verbose, serpapi_key=args.api_key)
+        res = process_faculty_member(
+            name,
+            verbose=verbose,
+            serpapi_key=args.api_key,
+            known_works=args.known_works,
+            known_orcid=args.known_orcid,
+            known_scholar=args.known_scholar
+        )
         results.append(res)
 
     if args.json:
