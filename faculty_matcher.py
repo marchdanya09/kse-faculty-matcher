@@ -420,6 +420,30 @@ def resolve_direct_orcid(orcid_input: str) -> Optional[Dict]:
             'source': 'ORCID (Direct Ground Truth Anchor)'
         }
 
+def safe_serpapi_get(
+    params: dict,
+    timeout: int = 25,
+    max_retries: int = 2,
+    backoff_factor: float = 1.5
+) -> Optional[requests.Response]:
+    """Executes a SerpAPI GET request with generous timeout (25s) and automatic retries for transient read/connect timeouts."""
+    url = 'https://serpapi.com/search.json'
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.get(url, params=params, timeout=timeout)
+            if resp.status_code in (502, 503, 504) and attempt < max_retries:
+                time.sleep(backoff_factor * (attempt + 1))
+                continue
+            return resp
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            if attempt < max_retries:
+                time.sleep(backoff_factor * (attempt + 1))
+                continue
+            raise e
+        except requests.exceptions.RequestException as e:
+            raise e
+    return None
+
 def resolve_direct_scholar(scholar_input: str, serpapi_key: Optional[str] = None) -> Optional[Dict]:
     """Directly resolves a pre-known Google Scholar ID or URL via SerpAPI."""
     if not scholar_input:
@@ -438,12 +462,12 @@ def resolve_direct_scholar(scholar_input: str, serpapi_key: Optional[str] = None
         return cand_obj
 
     try:
-        r = requests.get('https://serpapi.com/search.json', params={
+        r = safe_serpapi_get({
             'engine': 'google_scholar_author',
             'author_id': scholar_id,
             'api_key': serpapi_key
-        }, timeout=10)
-        if r.status_code == 200:
+        }, timeout=25, max_retries=2)
+        if r and r.status_code == 200:
             data = r.json()
             author = data.get('author', {})
             cand_obj['name'] = author.get('name', '')
@@ -475,8 +499,8 @@ def search_scholar_by_article(
         'api_key': serpapi_key
     }
     try:
-        r = requests.get('https://serpapi.com/search.json', params=params, timeout=10)
-        if r.status_code == 200:
+        r = safe_serpapi_get(params, timeout=25, max_retries=2)
+        if r and r.status_code == 200:
             data = r.json()
             for item in data.get('organic_results', []):
                 item_title = item.get('title', '')
@@ -524,12 +548,12 @@ def search_scholar_by_article(
                         }
                         # Fetch full profile info for clean affiliations and citation counts
                         try:
-                            prof_r = requests.get('https://serpapi.com/search.json', params={
+                            prof_r = safe_serpapi_get({
                                 'engine': 'google_scholar_author',
                                 'author_id': a_id,
                                 'api_key': serpapi_key
-                            }, timeout=8)
-                            if prof_r.status_code == 200:
+                            }, timeout=20, max_retries=1)
+                            if prof_r and prof_r.status_code == 200:
                                 p_data = prof_r.json().get('author', {})
                                 cand_obj['affiliations'] = p_data.get('affiliations', '')
                                 cand_obj['email_verification'] = p_data.get('email', '')
@@ -555,13 +579,13 @@ def verify_scholar_candidate_works(
     if not serpapi_key:
         return None
     try:
-        r = requests.get('https://serpapi.com/search.json', params={
+        r = safe_serpapi_get({
             'engine': 'google_scholar_author',
             'author_id': scholar_id,
             'api_key': serpapi_key,
             'num': 20
-        }, timeout=8)
-        if r.status_code == 200:
+        }, timeout=20, max_retries=2)
+        if r and r.status_code == 200:
             articles = [a.get('title', '') for a in r.json().get('articles', []) if a.get('title')]
             for kw in known_works:
                 for art in articles:
@@ -875,8 +899,8 @@ def search_google_scholar(
                 'q': variant,
                 'api_key': serpapi_key
             }
-            r = requests.get('https://serpapi.com/search.json', params=params, timeout=10)
-            if r.status_code == 200:
+            r = safe_serpapi_get(params, timeout=25, max_retries=2)
+            if r and r.status_code == 200:
                 data = r.json()
                 if "error" in data:
                     err_msg = data["error"]
@@ -942,7 +966,7 @@ def search_google_scholar(
                         if (is_kse or has_gt_work) and sim >= 90:
                             return cand_obj
                         api_candidates.append(cand_obj)
-            elif r.status_code == 401:
+            elif r and r.status_code == 401:
                 try:
                     err_msg = r.json().get('error', 'Invalid API key')
                 except Exception:
@@ -953,7 +977,7 @@ def search_google_scholar(
                     'message': f'SerpAPI access denied (HTTP 401: {err_msg})'
                 }
                 break
-            elif r.status_code == 403:
+            elif r and r.status_code == 403:
                 try:
                     err_msg = r.json().get('error', 'Forbidden / Access denied')
                 except Exception:
@@ -964,7 +988,7 @@ def search_google_scholar(
                     'message': f'SerpAPI access forbidden (HTTP 403: {err_msg})'
                 }
                 break
-            elif r.status_code == 429:
+            elif r and r.status_code == 429:
                 try:
                     err_msg = r.json().get('error', 'Quota exceeded')
                 except Exception:
@@ -975,13 +999,21 @@ def search_google_scholar(
                     'message': f'SerpAPI search quota exceeded (HTTP 429: {err_msg})'
                 }
                 break
-            else:
+            elif r is not None:
                 api_error = {
                     'error': True,
                     'error_type': 'API_ERROR',
                     'message': f'SerpAPI returned HTTP {r.status_code}'
                 }
                 break
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            # Transient timeout/connection issue on this variant; record error and continue to next alias
+            api_error = {
+                'error': True,
+                'error_type': 'NETWORK_TIMEOUT',
+                'message': f'SerpAPI network timeout (read timeout): {e}'
+            }
+            continue
         except requests.exceptions.RequestException as e:
             api_error = {
                 'error': True,
