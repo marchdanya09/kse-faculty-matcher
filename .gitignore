@@ -35,5 +35,5 @@ credentials.json
 *.swp
 *.swo
 .DS_Store
-Thumbs.db
-*.log
+# Isolated external subprojects
+faculty-data/

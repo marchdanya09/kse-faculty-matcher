@@ -52,6 +52,11 @@ This project automates the retrieval, disambiguation, and validation of academic
 - **Early Exit:** Once a confirmed KSE profile with match score $\ge 90\%$ is found, immediately terminate alias iteration. Consumes **strictly 1 credit per faculty member**.
 - **No Hardcoded Keys:** Secrets must strictly load from environment variables (`SERPAPI_API_KEY`).
 
+### D. Strict Isolation Rule: No Changes to `faculty-data/`
+- **DO NOT MODIFY**, commit, or push any files inside `faculty-data/`.
+- All development, integration, and bridge logic must reside strictly in our repository (`faculty_matcher.py`, `faculty_bridge.py`, test runners, mocks).
+- The `faculty-data/` directory is purely a reference copy and must remain untouched.
+
 ---
 
 ## 📊 4. Current Verification Ground Truth (25 Faculty Handled)

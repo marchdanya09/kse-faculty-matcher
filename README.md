@@ -120,6 +120,18 @@ python3 test_new_faculty.py
 python3 test_ground_truth.py
 ```
 
+### 10. Ingest & Enrich from KSE Faculty Data API / Exports (`faculty_bridge.py`):
+```bash
+# Run with mock faculty-data JSON (built-in benchmark):
+python3 faculty_bridge.py --mock -o bridge_results.json
+
+# Process custom JSON export from faculty-data:
+python3 faculty_bridge.py -f my_faculty_export.json -o bridge_results.json
+
+# Live API Ingestion (when API key is available):
+python3 faculty_bridge.py --api-url https://faculty-data-two.vercel.app/api/admin/v1 --api-key YOUR_KEY --faculty social-sciences -o live_results.json
+```
+
 ---
 
 ## ⚙️ CLI Reference Table

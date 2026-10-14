@@ -1,0 +1,408 @@
+{
+  "faculty_id": "social-sciences",
+  "teachers": [
+    {
+      "profile_id": "b1010001-0000-0000-0000-000000000001",
+      "name": "Mykola Trehub",
+      "profile": {
+        "position": "Професор, декан",
+        "academic_degree": "Доктор технічних наук",
+        "academic_title": "Професор",
+        "scientometrics": "",
+        "indexed_publications": "Determining and determinable factors influencing the size of zone of land-use restriction",
+        "ukrainian_fach_publications": "",
+        "taught_disciplines": "Землеустрій та кадастр",
+        "passport_data": "",
+        "education_documents": "",
+        "cooperation_form": "Основне місце роботи",
+        "appointment_fraction": "1.0",
+        "employment_start": "2022-09-01",
+        "employment_end": "",
+        "research_teaching_years": "15",
+        "professional_experience": "",
+        "professional_development": "",
+        "patents_and_copyrights": "",
+        "textbooks_and_monographs": "",
+        "teaching_materials": "",
+        "dissertation_defense": "",
+        "doctoral_supervision": "",
+        "dissertation_councils": "",
+        "research_and_editorial_roles": "",
+        "expert_councils_and_commissions": "",
+        "international_projects_and_expertise": "",
+        "institutional_scientific_consulting": "",
+        "outreach_and_expert_publications": "",
+        "foreign_language_teaching": "",
+        "student_competitions_and_research_groups": "",
+        "school_competitions_and_jury_work": "",
+        "professional_associations": "",
+        "practical_professional_experience": "",
+        "teaching_service_start": ""
+      },
+      "scientometric_details": {
+        "orcid": "",
+        "scopus": "",
+        "web_of_science": "",
+        "google_scholar": ""
+      },
+      "field_versions": {
+        "position": 1,
+        "academic_degree": 1,
+        "scientometrics": null,
+        "indexed_publications": 1
+      },
+      "fields": [
+        {
+          "key": "indexed_publications",
+          "row_id": "f1010001-0000-0000-0000-000000000001",
+          "category": "Статті у виданнях, що індексуються у Scopus / Web of Science",
+          "data": "Determining and determinable factors influencing the size of zone of land-use restriction",
+          "values": ["Determining and determinable factors influencing the size of zone of land-use restriction"],
+          "version": 1
+        }
+      ]
+    },
+    {
+      "profile_id": "b1010002-0000-0000-0000-000000000002",
+      "name": "Sergiy Kozerenko",
+      "profile": {
+        "position": "Доцент",
+        "academic_degree": "Кандидат фізико-математичних наук",
+        "academic_title": "Доцент",
+        "scientometrics": "ORCID: 0000-0002-5716-3084",
+        "indexed_publications": "Graphs with small triameters",
+        "ukrainian_fach_publications": "",
+        "taught_disciplines": "Дискретна математика",
+        "passport_data": "",
+        "education_documents": "",
+        "cooperation_form": "Основне місце роботи",
+        "appointment_fraction": "1.0",
+        "employment_start": "2020-09-01",
+        "employment_end": "",
+        "research_teaching_years": "8",
+        "professional_experience": "",
+        "professional_development": "",
+        "patents_and_copyrights": "",
+        "textbooks_and_monographs": "",
+        "teaching_materials": "",
+        "dissertation_defense": "",
+        "doctoral_supervision": "",
+        "dissertation_councils": "",
+        "research_and_editorial_roles": "",
+        "expert_councils_and_commissions": "",
+        "international_projects_and_expertise": "",
+        "institutional_scientific_consulting": "",
+        "outreach_and_expert_publications": "",
+        "foreign_language_teaching": "Англійська",
+        "student_competitions_and_research_groups": "",
+        "school_competitions_and_jury_work": "",
+        "professional_associations": "",
+        "practical_professional_experience": "",
+        "teaching_service_start": ""
+      },
+      "scientometric_details": {
+        "orcid": "ORCID: 0000-0002-5716-3084",
+        "scopus": "",
+        "web_of_science": "",
+        "google_scholar": ""
+      },
+      "field_versions": {
+        "position": 1,
+        "academic_degree": 1,
+        "scientometrics": 1,
+        "indexed_publications": 1
+      },
+      "fields": [
+        {
+          "key": "scientometrics",
+          "row_id": "f1010002-0000-0000-0000-000000000001",
+          "category": "Науковометричні дані",
+          "data": "ORCID: 0000-0002-5716-3084",
+          "values": ["ORCID: 0000-0002-5716-3084"],
+          "version": 1
+        },
+        {
+          "key": "indexed_publications",
+          "row_id": "f1010002-0000-0000-0000-000000000002",
+          "category": "Статті у виданнях, що індексуються у Scopus / Web of Science",
+          "data": "Graphs with small triameters",
+          "values": ["Graphs with small triameters"],
+          "version": 1
+        }
+      ]
+    },
+    {
+      "profile_id": "b1010003-0000-0000-0000-000000000003",
+      "name": "Kateryna Antoshyna",
+      "profile": {
+        "position": "Старший викладач",
+        "academic_degree": "PhD",
+        "academic_title": "",
+        "scientometrics": "Google Scholar: FYN91ucAAAAJ",
+        "indexed_publications": "Graphs with parity conditions on distances between cut and noncut vertices",
+        "ukrainian_fach_publications": "",
+        "taught_disciplines": "Лінійна алгебра",
+        "passport_data": "",
+        "education_documents": "",
+        "cooperation_form": "Основне місце роботи",
+        "appointment_fraction": "1.0",
+        "employment_start": "2021-09-01",
+        "employment_end": "",
+        "research_teaching_years": "5",
+        "professional_experience": "",
+        "professional_development": "",
+        "patents_and_copyrights": "",
+        "textbooks_and_monographs": "",
+        "teaching_materials": "",
+        "dissertation_defense": "",
+        "doctoral_supervision": "",
+        "dissertation_councils": "",
+        "research_and_editorial_roles": "",
+        "expert_councils_and_commissions": "",
+        "international_projects_and_expertise": "",
+        "institutional_scientific_consulting": "",
+        "outreach_and_expert_publications": "",
+        "foreign_language_teaching": "Англійська",
+        "student_competitions_and_research_groups": "",
+        "school_competitions_and_jury_work": "",
+        "professional_associations": "",
+        "practical_professional_experience": "",
+        "teaching_service_start": ""
+      },
+      "scientometric_details": {
+        "orcid": "",
+        "scopus": "",
+        "web_of_science": "",
+        "google_scholar": "Google Scholar: FYN91ucAAAAJ"
+      },
+      "field_versions": {
+        "position": 1,
+        "academic_degree": 1,
+        "scientometrics": 1,
+        "indexed_publications": 1
+      },
+      "fields": [
+        {
+          "key": "scientometrics",
+          "row_id": "f1010003-0000-0000-0000-000000000001",
+          "category": "Науковометричні дані",
+          "data": "Google Scholar: FYN91ucAAAAJ",
+          "values": ["Google Scholar: FYN91ucAAAAJ"],
+          "version": 1
+        },
+        {
+          "key": "indexed_publications",
+          "row_id": "f1010003-0000-0000-0000-000000000002",
+          "category": "Статті у виданнях, що індексуються у Scopus / Web of Science",
+          "data": "Graphs with parity conditions on distances between cut and noncut vertices",
+          "values": ["Graphs with parity conditions on distances between cut and noncut vertices"],
+          "version": 1
+        }
+      ]
+    },
+    {
+      "profile_id": "b1010004-0000-0000-0000-000000000004",
+      "name": "Тимофій Брік",
+      "profile": {
+        "position": "Проректор з наукової роботи",
+        "academic_degree": "PhD",
+        "academic_title": "Доцент",
+        "scientometrics": "ORCID: 0000-0002-5542-1019\nGoogle Scholar: NWO5_WwAAAAJ\nScopus: 57200234234",
+        "indexed_publications": "Witnessing Racial Discrimination Mobilizes Intra‐Minority Allyship, Explaining Ukraine's resilience to Russia's invasion",
+        "ukrainian_fach_publications": "",
+        "taught_disciplines": "Соціологія",
+        "passport_data": "",
+        "education_documents": "",
+        "cooperation_form": "Основне місце роботи",
+        "appointment_fraction": "1.0",
+        "employment_start": "2018-09-01",
+        "employment_end": "",
+        "research_teaching_years": "9",
+        "professional_experience": "",
+        "professional_development": "",
+        "patents_and_copyrights": "",
+        "textbooks_and_monographs": "",
+        "teaching_materials": "",
+        "dissertation_defense": "",
+        "doctoral_supervision": "",
+        "dissertation_councils": "",
+        "research_and_editorial_roles": "",
+        "expert_councils_and_commissions": "",
+        "international_projects_and_expertise": "",
+        "institutional_scientific_consulting": "",
+        "outreach_and_expert_publications": "",
+        "foreign_language_teaching": "Англійська",
+        "student_competitions_and_research_groups": "",
+        "school_competitions_and_jury_work": "",
+        "professional_associations": "",
+        "practical_professional_experience": "",
+        "teaching_service_start": ""
+      },
+      "scientometric_details": {
+        "orcid": "ORCID: 0000-0002-5542-1019",
+        "scopus": "Scopus: 57200234234",
+        "web_of_science": "",
+        "google_scholar": "Google Scholar: NWO5_WwAAAAJ"
+      },
+      "field_versions": {
+        "position": 1,
+        "academic_degree": 1,
+        "scientometrics": 1,
+        "indexed_publications": 1
+      },
+      "fields": [
+        {
+          "key": "scientometrics",
+          "row_id": "f1010004-0000-0000-0000-000000000001",
+          "category": "Науковометричні дані",
+          "data": "ORCID: 0000-0002-5542-1019\nGoogle Scholar: NWO5_WwAAAAJ\nScopus: 57200234234",
+          "values": ["ORCID: 0000-0002-5542-1019", "Google Scholar: NWO5_WwAAAAJ", "Scopus: 57200234234"],
+          "version": 1
+        },
+        {
+          "key": "indexed_publications",
+          "row_id": "f1010004-0000-0000-0000-000000000002",
+          "category": "Статті у виданнях, що індексуються у Scopus / Web of Science",
+          "data": "Witnessing Racial Discrimination Mobilizes Intra‐Minority Allyship, Explaining Ukraine's resilience to Russia's invasion",
+          "values": ["Witnessing Racial Discrimination Mobilizes Intra‐Minority Allyship", "Explaining Ukraine's resilience to Russia's invasion"],
+          "version": 1
+        }
+      ]
+    },
+    {
+      "profile_id": "b1010005-0000-0000-0000-000000000005",
+      "name": "Максим Обрізан",
+      "profile": {
+        "position": "Професор",
+        "academic_degree": "PhD",
+        "academic_title": "Професор",
+        "scientometrics": "",
+        "indexed_publications": "Mental health in Germany before, during and after the COVID-19 pandemic",
+        "ukrainian_fach_publications": "",
+        "taught_disciplines": "Економетрика",
+        "passport_data": "",
+        "education_documents": "",
+        "cooperation_form": "Основне місце роботи",
+        "appointment_fraction": "1.0",
+        "employment_start": "2014-09-01",
+        "employment_end": "",
+        "research_teaching_years": "14",
+        "professional_experience": "",
+        "professional_development": "",
+        "patents_and_copyrights": "",
+        "textbooks_and_monographs": "",
+        "teaching_materials": "",
+        "dissertation_defense": "",
+        "doctoral_supervision": "",
+        "dissertation_councils": "",
+        "research_and_editorial_roles": "",
+        "expert_councils_and_commissions": "",
+        "international_projects_and_expertise": "",
+        "institutional_scientific_consulting": "",
+        "outreach_and_expert_publications": "",
+        "foreign_language_teaching": "Англійська",
+        "student_competitions_and_research_groups": "",
+        "school_competitions_and_jury_work": "",
+        "professional_associations": "",
+        "practical_professional_experience": "",
+        "teaching_service_start": ""
+      },
+      "scientometric_details": {
+        "orcid": "",
+        "scopus": "",
+        "web_of_science": "",
+        "google_scholar": ""
+      },
+      "field_versions": {
+        "position": 1,
+        "academic_degree": 1,
+        "scientometrics": null,
+        "indexed_publications": 1
+      },
+      "fields": [
+        {
+          "key": "indexed_publications",
+          "row_id": "f1010005-0000-0000-0000-000000000001",
+          "category": "Статті у виданнях, що індексуються у Scopus / Web of Science",
+          "data": "Mental health in Germany before, during and after the COVID-19 pandemic",
+          "values": ["Mental health in Germany before, during and after the COVID-19 pandemic"],
+          "version": 1
+        }
+      ]
+    },
+    {
+      "profile_id": "b1010006-0000-0000-0000-000000000006",
+      "name": "Ігор Сердюк",
+      "profile": {
+        "position": "Професор",
+        "academic_degree": "Доктор історичних наук",
+        "academic_title": "Професор",
+        "scientometrics": "ORCID: 0000-0002-8930-1410",
+        "indexed_publications": "Causes of Death in 19th-Century Ukraine",
+        "ukrainian_fach_publications": "",
+        "taught_disciplines": "Історія України",
+        "passport_data": "",
+        "education_documents": "",
+        "cooperation_form": "Основне місце роботи",
+        "appointment_fraction": "1.0",
+        "employment_start": "2023-09-01",
+        "employment_end": "",
+        "research_teaching_years": "18",
+        "professional_experience": "",
+        "professional_development": "",
+        "patents_and_copyrights": "",
+        "textbooks_and_monographs": "",
+        "teaching_materials": "",
+        "dissertation_defense": "",
+        "doctoral_supervision": "",
+        "dissertation_councils": "",
+        "research_and_editorial_roles": "",
+        "expert_councils_and_commissions": "",
+        "international_projects_and_expertise": "",
+        "institutional_scientific_consulting": "",
+        "outreach_and_expert_publications": "",
+        "foreign_language_teaching": "",
+        "student_competitions_and_research_groups": "",
+        "school_competitions_and_jury_work": "",
+        "professional_associations": "",
+        "practical_professional_experience": "",
+        "teaching_service_start": ""
+      },
+      "scientometric_details": {
+        "orcid": "ORCID: 0000-0002-8930-1410",
+        "scopus": "",
+        "web_of_science": "",
+        "google_scholar": ""
+      },
+      "field_versions": {
+        "position": 1,
+        "academic_degree": 1,
+        "scientometrics": 1,
+        "indexed_publications": 1
+      },
+      "fields": [
+        {
+          "key": "scientometrics",
+          "row_id": "f1010006-0000-0000-0000-000000000001",
+          "category": "Науковометричні дані",
+          "data": "ORCID: 0000-0002-8930-1410",
+          "values": ["ORCID: 0000-0002-8930-1410"],
+          "version": 1
+        },
+        {
+          "key": "indexed_publications",
+          "row_id": "f1010006-0000-0000-0000-000000000002",
+          "category": "Статті у виданнях, що індексуються у Scopus / Web of Science",
+          "data": "Causes of Death in 19th-Century Ukraine",
+          "values": ["Causes of Death in 19th-Century Ukraine"],
+          "version": 1
+        }
+      ]
+    }
+  ],
+  "pagination": {
+    "limit": 50,
+    "offset": 0,
+    "has_more": false
+  }
+}
