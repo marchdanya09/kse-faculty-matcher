@@ -170,11 +170,19 @@ def main():
 
     # 1. Local File Ingestion
     if args.input:
-        if not os.path.exists(args.input):
-            print(f"Error: Input file '{args.input}' not found.", file=sys.stderr)
-            sys.exit(1)
-        with open(args.input, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        if args.input == "-":
+            try:
+                data = json.load(sys.stdin)
+            except Exception as e:
+                print(f"Error reading JSON from standard input: {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            if not os.path.exists(args.input):
+                print(f"Error: Input file '{args.input}' not found.", file=sys.stderr)
+                sys.exit(1)
+            with open(args.input, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
         if isinstance(data, list):
             raw_teachers = data
         elif isinstance(data, dict):
@@ -193,6 +201,9 @@ def main():
             sys.exit(1)
 
         base = args.api_url.rstrip("/")
+        if not base.endswith("/api/admin/v1") and not base.endswith("/api"):
+            base = f"{base}/api/admin/v1"
+
         faculties_to_query = ALL_FACULTIES if args.faculty == "all" else [args.faculty]
 
         if not args.quiet:

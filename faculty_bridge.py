@@ -297,6 +297,8 @@ def load_teachers_from_source(
             raise ValueError("Live API ingestion requires an API key (pass --api-key or set FACULTY_DATA_API_KEY).")
 
         base = (api_url or DEFAULT_FACULTY_DATA_URL).rstrip("/")
+        if not base.endswith("/api/admin/v1") and not base.endswith("/api"):
+            base = f"{base}/api/admin/v1"
 
         # If faculty is specified and not 'all', query only that faculty
         if faculty_id and faculty_id != "all":
@@ -309,7 +311,8 @@ def load_teachers_from_source(
                 try:
                     f_teachers = fetch_faculty_teachers_api(base, api_key, f_id)
                     teachers_list.extend(f_teachers)
-                except Exception:
+                except Exception as e:
+                    print(f"Warning: Faculty '{f_id}' fetch failed at {base}: {e}", file=sys.stderr)
                     continue
 
     # 3. Default fallback: mock data
@@ -518,7 +521,7 @@ def main():
     # If --fetch-only was requested: just output the raw teacher JSON and exit
     if args.fetch_only:
         payload = teachers[0] if len(teachers) == 1 else teachers
-        if args.output:
+        if args.output and args.output != "-":
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2, ensure_ascii=False)
             if not args.quiet:
@@ -538,7 +541,7 @@ def main():
         limit=args.limit
     )
 
-    if args.json:
+    if args.json or args.output == "-":
         print(json.dumps(results, indent=2, ensure_ascii=False))
     elif not args.quiet:
         print("\n" + "=" * 80)
@@ -562,7 +565,7 @@ def main():
         print("=" * 80)
         print(f"Total processed: {len(results)} faculty member(s).")
 
-    if args.output:
+    if args.output and args.output != "-":
         with open(args.output, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
         if not args.json and not args.quiet:
