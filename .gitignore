@@ -38,3 +38,4 @@ credentials.json
 # Isolated external subprojects
 faculty-data/
 teacher_*.json
+teachers_*.json
