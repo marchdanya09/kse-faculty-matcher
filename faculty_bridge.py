@@ -7,6 +7,8 @@ disambiguation pipeline.
 
 Workflow:
 1. Ingests teacher profiles from 'faculty-data' (via local JSON mock/export or live API).
+   - Allows targeted single-teacher lookup via `--teacher-name / -n`.
+   - Supports `--fetch-only` to dump raw teacher JSON without sending queries.
 2. Extracts available ground-truth anchors:
    - Known publication titles ('indexed_publications' / 'ukrainian_fach_publications')
    - Existing ORCID IDs ('scientometric_details.orcid' or 'scientometrics')
@@ -31,12 +33,24 @@ import urllib.parse
 import urllib.request
 from typing import Dict, List, Optional, Tuple
 
+from rapidfuzz import fuzz
+
 # Import the core matching engine
 try:
     from faculty_matcher import process_faculty_member, DEFAULT_SERPAPI_KEY
 except ImportError:
     print("Error: Could not import 'faculty_matcher'. Ensure it is in the same directory.", file=sys.stderr)
     sys.exit(1)
+
+DEFAULT_FACULTY_DATA_URL = "https://faculty-data-two.vercel.app/api/admin/v1"
+ALL_FACULTIES = [
+    "social-sciences",
+    "mathematics",
+    "computer-science",
+    "economics",
+    "engineering",
+    "business"
+]
 
 
 # ==============================================================================
@@ -115,16 +129,60 @@ def extract_teacher_anchors(teacher: Dict) -> Dict:
 # ==============================================================================
 # INGESTION: LOAD TEACHERS FROM FILE OR LIVE REST API
 # ==============================================================================
+def fetch_faculty_teachers_api(
+    base_url: str,
+    api_key: str,
+    faculty_id: str,
+    teacher_name_filter: Optional[str] = None
+) -> List[Dict]:
+    """Fetches teachers from faculty-data API, supporting pagination."""
+    teachers: List[Dict] = []
+    offset = 0
+    limit = 100
+    headers = {"X-Faculty-Data-Key": api_key, "User-Agent": "KSE-Faculty-Matcher-Bridge/1.0"}
+
+    while True:
+        endpoint = f"{base_url}/faculties/{faculty_id}/teachers?limit={limit}&offset={offset}"
+        req = urllib.request.Request(endpoint, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return []
+            raise
+
+        batch = data.get("teachers", [])
+        if not batch:
+            break
+
+        for t in batch:
+            t["faculty_id"] = faculty_id
+            teachers.append(t)
+
+        pagination = data.get("pagination", {})
+        if not pagination.get("has_more") or len(batch) < limit:
+            break
+        offset += limit
+
+    return teachers
+
+
 def load_teachers_from_source(
     file_path: Optional[str] = None,
     api_url: Optional[str] = None,
     api_key: Optional[str] = None,
-    faculty_id: str = "social-sciences"
+    faculty_id: str = "social-sciences",
+    teacher_name_filter: Optional[str] = None
 ) -> Tuple[str, List[Dict]]:
     """
     Loads teacher profiles either from a local JSON file or the live faculty-data API.
     Returns (faculty_id, teachers_list).
     """
+    teachers_list: List[Dict] = []
+    effective_faculty = faculty_id
+
+    # 1. Local file ingestion
     if file_path:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Input file '{file_path}' not found.")
@@ -132,40 +190,58 @@ def load_teachers_from_source(
             data = json.load(f)
 
         if isinstance(data, dict):
-            ret_faculty = data.get("faculty_id") or faculty_id
+            effective_faculty = data.get("faculty_id") or faculty_id
             if "teachers" in data and isinstance(data["teachers"], list):
-                return ret_faculty, data["teachers"]
+                teachers_list = data["teachers"]
             elif "teacher" in data and isinstance(data["teacher"], dict):
-                return ret_faculty, [data["teacher"]]
+                teachers_list = [data["teacher"]]
             else:
-                return ret_faculty, [data]
+                teachers_list = [data]
         elif isinstance(data, list):
-            return faculty_id, data
+            teachers_list = data
         else:
             raise ValueError("Unsupported JSON format in input file.")
 
-    # Live API Ingestion
-    if api_url:
+    # 2. Live API Ingestion
+    elif api_key or api_url:
         api_key = api_key or os.getenv("FACULTY_DATA_API_KEY")
         if not api_key:
             raise ValueError("Live API ingestion requires an API key (pass --api-key or set FACULTY_DATA_API_KEY).")
 
-        base = api_url.rstrip("/")
-        endpoint = f"{base}/faculties/{faculty_id}/teachers?limit=100&offset=0"
-        headers = {"X-Faculty-Data-Key": api_key, "User-Agent": "KSE-Faculty-Matcher-Bridge/1.0"}
+        base = (api_url or DEFAULT_FACULTY_DATA_URL).rstrip("/")
 
-        req = urllib.request.Request(endpoint, headers=headers)
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        # If faculty is specified and not 'all', query only that faculty
+        if faculty_id and faculty_id != "all":
+            teachers_list = fetch_faculty_teachers_api(base, api_key, faculty_id)
+            effective_faculty = faculty_id
+        else:
+            # Query across all faculties
+            effective_faculty = "all"
+            for f_id in ALL_FACULTIES:
+                try:
+                    f_teachers = fetch_faculty_teachers_api(base, api_key, f_id)
+                    teachers_list.extend(f_teachers)
+                except Exception:
+                    continue
 
-        return data.get("faculty_id", faculty_id), data.get("teachers", [])
+    # 3. Default fallback: mock data
+    else:
+        default_mock = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock_faculty_data.json")
+        if os.path.exists(default_mock):
+            return load_teachers_from_source(file_path=default_mock, faculty_id=faculty_id, teacher_name_filter=teacher_name_filter)
+        raise ValueError("No input source provided. Specify --file <path>, --api-key <key>, or use --mock.")
 
-    # Default fallback: mock data
-    default_mock = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock_faculty_data.json")
-    if os.path.exists(default_mock):
-        return load_teachers_from_source(file_path=default_mock, faculty_id=faculty_id)
+    # Filter by teacher name if requested
+    if teacher_name_filter:
+        clean_target = teacher_name_filter.strip().lower()
+        matched = []
+        for t in teachers_list:
+            t_name = (t.get("name") or "").strip().lower()
+            if clean_target in t_name or fuzz.token_set_ratio(clean_target, t_name) >= 80:
+                matched.append(t)
+        return effective_faculty, matched
 
-    raise ValueError("No input source provided. Specify --file <path> or use --mock.")
+    return effective_faculty, teachers_list
 
 
 # ==============================================================================
@@ -176,6 +252,7 @@ def run_bridge(
     faculty_id: str = "social-sciences",
     verbose: bool = True,
     serpapi_key: Optional[str] = None,
+    serper_key: Optional[str] = None,
     limit: Optional[int] = None
 ) -> List[Dict]:
     """
@@ -187,7 +264,7 @@ def run_bridge(
 
     if verbose:
         print("=" * 80)
-        print(f"🌉 KSE FACULTY DATA BRIDGE: Processing {len(to_process)} teachers from '{faculty_id}'")
+        print(f"🌉 KSE FACULTY DATA BRIDGE: Processing {len(to_process)} teacher(s) from '{faculty_id}'")
         print("=" * 80)
 
     for idx, teacher in enumerate(to_process, 1):
@@ -197,6 +274,7 @@ def run_bridge(
         works = anchors["known_works"]
         orcid = anchors["known_orcid"]
         scholar = anchors["known_scholar"]
+        t_faculty = teacher.get("faculty_id") or faculty_id
 
         # Classification of supplied anchors for display
         anchor_tags = []
@@ -210,7 +288,7 @@ def run_bridge(
 
         if verbose:
             print(f"\n[{idx}/{len(to_process)}] {name}")
-            print(f"  🏢 Profile ID: {profile_id}")
+            print(f"  🏢 Profile ID: {profile_id} (Faculty: {t_faculty})")
             print(f"  ⚓ Supplied Anchors: [{anchor_desc}]")
             if works:
                 print(f"  📖 Sample Work: \"{works[0][:75]}...\"" if len(works[0]) > 75 else f"  📖 Sample Work: \"{works[0]}\"")
@@ -224,6 +302,7 @@ def run_bridge(
             input_name=name,
             verbose=verbose,
             serpapi_key=serpapi_key,
+            serper_key=serper_key,
             known_works=works,
             known_orcid=orcid,
             known_scholar=scholar
@@ -258,7 +337,7 @@ def run_bridge(
 
         enriched_item = {
             "profile_id": profile_id,
-            "faculty_id": faculty_id,
+            "faculty_id": t_faculty,
             "name": name,
             "initial_state": {
                 "had_works": len(works) > 0,
@@ -296,10 +375,13 @@ def main():
     )
     parser.add_argument("-f", "--file", help="Path to faculty-data JSON export file.")
     parser.add_argument("--mock", action="store_true", help="Run using built-in mock_faculty_data.json.")
-    parser.add_argument("--api-url", help="Base URL of live faculty-data instance (e.g. https://faculty-data-two.vercel.app/api/admin/v1).")
+    parser.add_argument("-n", "--teacher-name", dest="teacher_name", help="Query a specific teacher by name.")
+    parser.add_argument("--fetch-only", action="store_true", help="Only fetch and save the teacher JSON without running matching.")
+    parser.add_argument("--api-url", default=DEFAULT_FACULTY_DATA_URL, help=f"Base URL of faculty-data API (default: {DEFAULT_FACULTY_DATA_URL}).")
     parser.add_argument("--api-key", help="X-Faculty-Data-Key for live API authentication.")
-    parser.add_argument("--faculty", default="social-sciences", help="Faculty ID to process (default: social-sciences).")
+    parser.add_argument("--faculty", default="social-sciences", help="Faculty ID to process ('all' to search all faculties; default: social-sciences).")
     parser.add_argument("--serpapi-key", help="SerpAPI key for Scholar lookups (defaults to SERPAPI_API_KEY from .env).")
+    parser.add_argument("--serper-key", help="Serper.dev key for Scholar lookups (defaults to SERPER_API_KEY from .env).")
     parser.add_argument("-o", "--output", help="File path to save enriched results JSON.")
     parser.add_argument("-l", "--limit", type=int, help="Limit number of teachers to process.")
     parser.add_argument("--json", action="store_true", help="Output pure JSON to stdout.")
@@ -311,16 +393,43 @@ def main():
     if args.mock and not input_file:
         input_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mock_faculty_data.json")
 
+    # Key Auto-detection: If serpapi_key has 40 chars, treat as serper_key
+    serper_k = args.serper_key or os.getenv("SERPER_API_KEY")
+    serpapi_k = args.serpapi_key or os.getenv("SERPAPI_API_KEY")
+    if serpapi_k and len(serpapi_k.strip()) == 40 and not serper_k:
+        serper_k = serpapi_k
+        serpapi_k = None
+
     try:
         faculty_id, teachers = load_teachers_from_source(
             file_path=input_file,
-            api_url=args.api_url,
+            api_url=args.api_url if (args.api_key or os.getenv("FACULTY_DATA_API_KEY")) else None,
             api_key=args.api_key,
-            faculty_id=args.faculty
+            faculty_id=args.faculty,
+            teacher_name_filter=args.teacher_name
         )
     except Exception as e:
         print(f"Error loading faculty data: {e}", file=sys.stderr)
         sys.exit(1)
+
+    if not teachers:
+        if args.teacher_name:
+            print(f"No teacher matching '{args.teacher_name}' found in faculty '{faculty_id}'.", file=sys.stderr)
+        else:
+            print(f"No teachers found in '{faculty_id}'.", file=sys.stderr)
+        sys.exit(1)
+
+    # If --fetch-only was requested: just output the raw teacher JSON and exit
+    if args.fetch_only:
+        payload = teachers[0] if len(teachers) == 1 else teachers
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2, ensure_ascii=False)
+            if not args.quiet:
+                print(f"Successfully fetched and saved {len(teachers)} teacher record(s) to '{args.output}'.")
+        else:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        sys.exit(0)
 
     verbose = not (args.json or args.quiet)
 
@@ -328,7 +437,8 @@ def main():
         teachers=teachers,
         faculty_id=faculty_id,
         verbose=verbose,
-        serpapi_key=args.serpapi_key,
+        serpapi_key=serpapi_k,
+        serper_key=serper_k,
         limit=args.limit
     )
 
@@ -354,7 +464,7 @@ def main():
             print(f"{name:<25} | {st:<28} | {orcid:<19} | {scholar:<12} | {disc_str}")
 
         print("=" * 80)
-        print(f"Total processed: {len(results)} faculty members.")
+        print(f"Total processed: {len(results)} faculty member(s).")
 
     if args.output:
         with open(args.output, "w", encoding="utf-8") as f:

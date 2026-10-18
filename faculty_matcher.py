@@ -10,7 +10,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import requests
 from bs4 import BeautifulSoup
 from rapidfuzz import fuzz
@@ -42,8 +42,24 @@ def _load_dotenv_auto():
 _load_dotenv_auto()
 
 DEFAULT_SERPAPI_KEY = os.getenv("SERPAPI_API_KEY", "")
+DEFAULT_SERPER_API_KEY = os.getenv("SERPER_API_KEY", "")
 DEFAULT_GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 DEFAULT_GOOGLE_CSE_CX = os.getenv("GOOGLE_CSE_CX", "")
+
+def resolve_api_keys(
+    serper_key: Optional[str] = None,
+    serpapi_key: Optional[str] = None
+) -> Tuple[str, str]:
+    """Resolves Serper and SerpAPI keys with auto-detection for 40-character keys."""
+    resolved_serper = (serper_key or os.getenv("SERPER_API_KEY") or DEFAULT_SERPER_API_KEY).strip()
+    resolved_serpapi = (serpapi_key or os.getenv("SERPAPI_API_KEY") or DEFAULT_SERPAPI_KEY).strip()
+    # Auto-detect: Serper.dev keys are 40 hex chars, SerpAPI keys are 64 hex chars
+    if not resolved_serper and len(resolved_serpapi) == 40:
+        resolved_serper = resolved_serpapi
+        resolved_serpapi = ""
+    elif len(resolved_serpapi) == 40 and resolved_serper == resolved_serpapi:
+        resolved_serpapi = ""
+    return resolved_serper, resolved_serpapi
 POLITE_USER_AGENT = "KSE-DataQuality/1.0 (mailto:grant@kse.org.ua)"
 BROWSER_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -52,7 +68,8 @@ BROWSER_USER_AGENT = (
 
 KSE_INSTITUTION_KEYWORDS = [
     'kyiv school of economics', 'kse', 'kyiv economics institute',
-    'economics education and research consortium', 'eerc', 'київська школа економіки'
+    'economics education and research consortium', 'eerc', 'київська школа економіки',
+    'київська школа'
 ]
 PARTNER_INSTITUTION_KEYWORDS = [
     'kyiv-mohyla', 'naukma', 'taras shevchenko', 'knu', 'institute of mathematics',
@@ -480,13 +497,42 @@ def safe_serpapi_get(
             raise e
     return None
 
-def resolve_direct_scholar(scholar_input: str, serpapi_key: Optional[str] = None) -> Optional[Dict]:
-    """Directly resolves a pre-known Google Scholar ID or URL via SerpAPI."""
+def safe_serper_post(payload: Dict, api_key: str, timeout: int = 15, max_retries: int = 2) -> Optional[requests.Response]:
+    """Sends a POST request to Serper.dev with retries and timeout protection."""
+    if not api_key:
+        return None
+    headers = {
+        'X-API-KEY': api_key.strip(),
+        'Content-Type': 'application/json'
+    }
+    url = "https://google.serper.dev/search"
+    for attempt in range(max_retries + 1):
+        try:
+            resp = requests.post(url, headers=headers, json=payload, timeout=timeout)
+            if resp.status_code in (502, 503, 504) and attempt < max_retries:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            return resp
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            if attempt < max_retries:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            return None
+        except Exception:
+            return None
+    return None
+
+def resolve_direct_scholar(
+    scholar_input: str,
+    serpapi_key: Optional[str] = None,
+    serper_key: Optional[str] = None
+) -> Optional[Dict]:
+    """Directly resolves a pre-known Google Scholar ID or URL via Serper.dev or SerpAPI."""
     if not scholar_input:
         return None
     m = re.search(r'user=([a-zA-Z0-9_\-]+)', scholar_input)
     scholar_id = m.group(1) if m else scholar_input.strip()
-    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+    serper_key, serpapi_key = resolve_api_keys(serper_key=serper_key, serpapi_key=serpapi_key)
 
     cand_obj = {
         'scholar_id': scholar_id,
@@ -494,7 +540,24 @@ def resolve_direct_scholar(scholar_input: str, serpapi_key: Optional[str] = None
         'source': 'Google Scholar (Direct Ground Truth Anchor)',
         'match_score': 100
     }
-    if not serpapi_key:
+
+    # Enrich via Serper if available
+    if serper_key:
+        try:
+            r = safe_serper_post({'q': f'site:scholar.google.com/citations \"{scholar_id}\"'}, api_key=serper_key, timeout=15)
+            if r and r.status_code == 200:
+                data = r.json()
+                for item in data.get('organic', []):
+                    if f"user={scholar_id}" in item.get('link', ''):
+                        raw_title = item.get('title', '')
+                        cand_obj['name'] = re.sub(r'\s*-\s*Google Scholar.*', '', raw_title, flags=re.IGNORECASE).strip()
+                        cand_obj['affiliations'] = str(item.get('snippet') or '')[:160]
+                        cand_obj['email_verification'] = 'kse.org.ua' if 'kse.org.ua' in cand_obj['affiliations'].lower() else 'Verified'
+                        break
+        except Exception:
+            pass
+
+    if not serpapi_key or cand_obj.get('name'):
         return cand_obj
 
     try:
@@ -519,14 +582,96 @@ def resolve_direct_scholar(scholar_input: str, serpapi_key: Optional[str] = None
         pass
     return cand_obj
 
+def search_scholar_by_article_serper(
+    author_name: str,
+    article_title: str,
+    name_variants: Optional[List[str]] = None,
+    serper_key: Optional[str] = None
+) -> Optional[Dict]:
+    """Finds Google Scholar profile via Serper.dev by querying article title and matching author link."""
+    serper_key, _ = resolve_api_keys(serper_key=serper_key)
+    if not serper_key or not article_title:
+        return None
+
+    variants = name_variants or generate_name_variants(author_name)
+    clean_kw = normalize_title(article_title)
+    clean_kw = re.sub(r'^[\'"“‘\s]+|[\'"”’\s]+$', '', clean_kw)
+
+    queries_to_try = [f'site:scholar.google.com/citations "{variants[0]}" {clean_kw[:50]}'.strip()]
+    if ':' in clean_kw:
+        main_t = clean_kw.split(':', 1)[0].strip()
+        if len(main_t) > 15:
+            queries_to_try.append(f'site:scholar.google.com/citations "{variants[0]}" {main_t}'.strip())
+
+    for q_str in queries_to_try:
+        try:
+            r = safe_serper_post({'q': q_str}, api_key=serper_key, timeout=15, max_retries=2)
+            if r and r.status_code == 200:
+                data = r.json()
+                for item in data.get('organic', []):
+                    link = item.get('link', '')
+                    if 'citations?user=' not in link:
+                        continue
+                    m = re.search(r'user=([a-zA-Z0-9_\-]+)', link)
+                    if not m:
+                        continue
+                    a_id = m.group(1)
+                    raw_title = item.get('title', '')
+                    clean_title = re.sub(r'\s*-\s*Google Scholar.*', '', raw_title, flags=re.IGNORECASE).strip()
+                    sub_names = [s.strip() for s in re.split(r'[,/;|]', clean_title) if s.strip()]
+                    name_sim = max(fuzz.token_sort_ratio(v, sub) for v in variants for sub in (sub_names or [clean_title]))
+
+                    if name_sim >= 70:
+                        snippet = str(item.get('snippet') or '').replace('\n', ' ')
+                        is_kse = (
+                            any(k in snippet.lower() for k in KSE_INSTITUTION_KEYWORDS) or
+                            any(k in clean_title.lower() for k in KSE_INSTITUTION_KEYWORDS) or
+                            'kse.org.ua' in snippet.lower()
+                        )
+                        cited_by = None
+                        cited_m = re.search(r'[Cc]ited by\s*([\d,]+)|[Цц]итуван[ья][\s:]*([\d,]+)|[Цц]итат[\s:]*([\d,]+)', snippet)
+                        if cited_m:
+                            for grp in cited_m.groups():
+                                if grp:
+                                    try:
+                                        cited_by = int(grp.replace(',', ''))
+                                        break
+                                    except ValueError:
+                                        pass
+
+                        return {
+                            'scholar_id': a_id,
+                            'profile_url': f"https://scholar.google.com/citations?user={a_id}&hl=en",
+                            'name': clean_title,
+                            'affiliations': snippet[:160],
+                            'email_verification': 'kse.org.ua' if 'kse.org.ua' in snippet.lower() else ('Verified' if is_kse else 'Unverified'),
+                            'is_kse_affiliated': is_kse,
+                            'source': 'Serper.dev (Publication Co-Citation Anchor)',
+                            'match_score': 100,
+                            'matched_article': article_title,
+                            'ground_truth_matched': True,
+                            'cited_by': cited_by
+                        }
+        except Exception:
+            pass
+    return None
+
 def search_scholar_by_article(
     author_name: str,
     article_title: str,
     name_variants: Optional[List[str]] = None,
-    serpapi_key: Optional[str] = None
+    serpapi_key: Optional[str] = None,
+    serper_key: Optional[str] = None
 ) -> Optional[Dict]:
     """Finds Google Scholar profile by querying an article title and matching author link in citations."""
-    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+    serper_key, serpapi_key = resolve_api_keys(serper_key=serper_key, serpapi_key=serpapi_key)
+    if serper_key:
+        serper_art = search_scholar_by_article_serper(
+            author_name, article_title, name_variants=name_variants, serper_key=serper_key
+        )
+        if serper_art:
+            return serper_art
+
     if not serpapi_key or not article_title:
         return None
 
@@ -933,35 +1078,171 @@ def search_google_scholar_cse(
 
     return None
 
+def search_google_scholar_serper(
+    name_variants: List[str],
+    serper_key: Optional[str] = None,
+    known_works: Optional[List[str]] = None
+) -> Optional[Dict]:
+    """Finds Google Scholar profile using Serper.dev (2,500 Free Queries, zero scraping ban risk)."""
+    serper_key, _ = resolve_api_keys(serper_key=serper_key)
+    if not serper_key:
+        return None
+
+    candidates = []
+    # Test up to top 6 variants (covers English transliterations, inversions, and native Cyrillic)
+    for variant in name_variants[:6]:
+        try:
+            payload = {'q': f'site:scholar.google.com/citations "{variant}"'}
+            r = safe_serper_post(payload, api_key=serper_key, timeout=15, max_retries=2)
+            if r and r.status_code == 200:
+                data = r.json()
+                for item in data.get('organic', []):
+                    link = item.get('link', '')
+                    if 'citations?user=' not in link:
+                        continue
+                    m = re.search(r'user=([a-zA-Z0-9_\-]+)', link)
+                    if not m:
+                        continue
+                    uid = m.group(1)
+                    raw_title = item.get('title', '')
+                    clean_title = re.sub(r'[\u200e\u200f\u202a-\u202e]', '', raw_title)
+                    clean_title = re.sub(r'\s*-\s*Google Scholar.*', '', clean_title, flags=re.IGNORECASE).strip()
+                    snippet = str(item.get('snippet') or '').replace('\n', ' ')
+
+                    # Multi-alias splitting rule: split on [,/;|]
+                    sub_names = [s.strip() for s in re.split(r'[,/;|]', clean_title) if s.strip()]
+                    name_sim = max(fuzz.token_sort_ratio(v, sub) for v in name_variants for sub in (sub_names or [clean_title]))
+
+                    # Strict anti-homonym check: Candidate name must have reasonable match
+                    if name_sim < 65:
+                        continue
+
+                    is_kse = (
+                        any(k in snippet.lower() for k in KSE_INSTITUTION_KEYWORDS) or
+                        any(k in clean_title.lower() for k in KSE_INSTITUTION_KEYWORDS) or
+                        'kse.org.ua' in snippet.lower()
+                    )
+                    is_partner = (
+                        any(p in snippet.lower() for p in PARTNER_INSTITUTION_KEYWORDS) or
+                        any(p in clean_title.lower() for p in PARTNER_INSTITUTION_KEYWORDS)
+                    )
+
+                    has_gt_work = False
+                    matched_art = None
+                    if known_works and name_sim >= 70:
+                        for kw in known_works:
+                            if match_publication_title(kw, snippet, threshold=60) or normalize_title(kw) in normalize_title(snippet):
+                                has_gt_work = True
+                                matched_art = kw
+                                name_sim = 100
+                                break
+
+                    if is_kse or has_gt_work:
+                        name_sim += 25
+                    elif is_partner:
+                        name_sim += 10
+                    else:
+                        # Strict homonym penalty for non-KSE / unrelated institutions
+                        name_sim = min(name_sim, 65)
+
+                    if name_sim >= 75:
+                        cited_by = None
+                        cited_m = re.search(r'[Cc]ited by\s*([\d,]+)|[Цц]итуван[ья][\s:]*([\d,]+)|[Цц]итат[\s:]*([\d,]+)', snippet)
+                        if cited_m:
+                            for grp in cited_m.groups():
+                                if grp:
+                                    try:
+                                        cited_by = int(grp.replace(',', ''))
+                                        break
+                                    except ValueError:
+                                        pass
+
+                        cand_obj = {
+                            'scholar_id': uid,
+                            'profile_url': f"https://scholar.google.com/citations?user={uid}&hl=en",
+                            'name': clean_title,
+                            'affiliations': snippet[:160],
+                            'email_verification': 'kse.org.ua' if 'kse.org.ua' in snippet.lower() else ('Verified' if is_kse else 'Unverified'),
+                            'is_kse_affiliated': is_kse or has_gt_work,
+                            'ground_truth_matched': has_gt_work,
+                            'matched_article': matched_art,
+                            'cited_by': cited_by,
+                            'source': 'Serper.dev (Verified Ground Truth Publication)' if has_gt_work else 'Serper.dev (Google Scholar)',
+                            'match_score': min(name_sim, 100)
+                        }
+                        # EARLY EXIT: Save credits immediately if high-confidence KSE/ground-truth profile found
+                        if (is_kse or has_gt_work) and name_sim >= 85:
+                            return cand_obj
+                        candidates.append(cand_obj)
+            elif r and r.status_code == 401:
+                return {
+                    'error': True,
+                    'error_type': 'API_KEY_INVALID',
+                    'message': 'Serper.dev access denied (HTTP 401: Invalid API key)'
+                }
+            elif r and r.status_code == 429:
+                return {
+                    'error': True,
+                    'error_type': 'QUOTA_EXCEEDED',
+                    'message': 'Serper.dev search quota exceeded (HTTP 429)'
+                }
+        except Exception:
+            continue
+
+    if candidates:
+        candidates.sort(key=lambda x: (x.get('is_kse_affiliated', False), x.get('match_score', 0)), reverse=True)
+        return candidates[0]
+    return None
+
 def search_google_scholar(
     name_variants: List[str],
     sample_works: List[str] = None,
     google_api_key: Optional[str] = None,
     google_cse_cx: Optional[str] = None,
     serpapi_key: Optional[str] = None,
+    serper_key: Optional[str] = None,
     known_works: Optional[List[str]] = None
 ) -> Optional[Dict]:
-    """Finds Google Scholar profile URL across Google CSE (Free Tier), SerpAPI, and Web Search."""
-    serpapi_key = (serpapi_key or os.getenv('SERPAPI_API_KEY') or DEFAULT_SERPAPI_KEY).strip()
+    """Finds Google Scholar profile URL across Serper.dev (Free Tier), Google CSE, and SerpAPI."""
+    serper_key, serpapi_key = resolve_api_keys(serper_key=serper_key, serpapi_key=serpapi_key)
 
     # 0. Tier 0: Direct ground-truth article co-citation lookup if known_works provided
-    if known_works and serpapi_key:
+    if known_works and (serper_key or serpapi_key):
         for kw in known_works[:2]:
-            art_cand = search_scholar_by_article(name_variants[0], kw, name_variants=name_variants, serpapi_key=serpapi_key)
+            art_cand = search_scholar_by_article(
+                name_variants[0],
+                kw,
+                name_variants=name_variants,
+                serpapi_key=serpapi_key,
+                serper_key=serper_key
+            )
             if art_cand:
                 return art_cand
 
-    # 1. Tier 2: Google Programmable Search Engine (100 Free queries/day)
+    # 1. Tier 1: Serper.dev (2,500 Free queries, zero scraping ban risk)
+    serper_error = None
+    if serper_key:
+        serper_res = search_google_scholar_serper(name_variants, serper_key=serper_key, known_works=known_works)
+        if serper_res:
+            if not serper_res.get('error'):
+                return serper_res
+            serper_error = serper_res
+
+    # 2. Tier 2: Google Programmable Search Engine (100 Free queries/day)
     cse_result = search_google_scholar_cse(name_variants, api_key=google_api_key, cx=google_cse_cx)
     if cse_result:
         return cse_result
 
-    # 2. Tier 3: SerpAPI with Early Exit (Paid / Free Monthly Credits)
+    # 3. Tier 3: SerpAPI with Early Exit (Paid / Free Monthly Credits)
     if not serpapi_key:
+        if serper_error:
+            return serper_error
+        if serper_key:
+            return None
         return {
             'error': True,
             'error_type': 'API_KEY_MISSING',
-            'message': 'API key not configured (set SERPAPI_API_KEY in .env or pass --api-key)'
+            'message': 'API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)'
         }
 
     api_candidates = []
@@ -1113,6 +1394,7 @@ def process_faculty_member(
     input_name: str,
     verbose: bool = True,
     serpapi_key: Optional[str] = None,
+    serper_key: Optional[str] = None,
     known_works: Optional[List[str]] = None,
     known_orcid: Optional[str] = None,
     known_scholar: Optional[str] = None
@@ -1173,9 +1455,21 @@ def process_faculty_member(
                     'institutions': verified_alex_orcid.get('institutions', []),
                     'source': 'OpenAlex'
                 }
-                if alex_data.get('matched_work'):
+                alex_matched_work = alex_data.get('matched_work')
+                if not alex_matched_work and clean_works:
+                    c_works = fetch_orcid_works(candidate_orcid)
+                    for kw in clean_works:
+                        for cw in c_works:
+                            if match_publication_title(kw, cw, threshold=75):
+                                alex_matched_work = kw
+                                break
+                        if alex_matched_work:
+                            break
+                if alex_matched_work:
                     is_gt_verified = True
-                    gt_reasons.append(f"ORCID verified via ground-truth work: '{alex_data['matched_work']}'")
+                    orcid_info['matched_work'] = alex_matched_work
+                    orcid_info['source'] = 'OpenAlex (Ground Truth Publication Match)'
+                    gt_reasons.append(f"ORCID verified via ground-truth work: '{alex_matched_work}'")
         if not orcid_info:
             direct_orcid = query_orcid(variants, known_works=clean_works)
             if direct_orcid:
@@ -1193,7 +1487,7 @@ def process_faculty_member(
     # 2. Google Scholar resolution (Direct Anchor -> Wikidata SPARQL -> Article/Scholar Search)
     scholar_info = None
     if known_scholar:
-        scholar_info = resolve_direct_scholar(known_scholar, serpapi_key=serpapi_key)
+        scholar_info = resolve_direct_scholar(known_scholar, serpapi_key=serpapi_key, serper_key=serper_key)
         if scholar_info:
             is_gt_verified = True
             gt_reasons.append(f"Scholar anchored directly from ground-truth input: {scholar_info.get('scholar_id')}")
@@ -1206,6 +1500,7 @@ def process_faculty_member(
             variants,
             sample_works,
             serpapi_key=serpapi_key,
+            serper_key=serper_key,
             known_works=clean_works
         )
         if scholar_info and not scholar_info.get('error'):
@@ -1372,13 +1667,19 @@ Examples:
     parser.add_argument('-w', '--work', action='append', dest='known_works', help="Known scientific publication title (can be repeated).")
     parser.add_argument('--orcid', dest='known_orcid', help="Known ORCID iD or URL.")
     parser.add_argument('--scholar', dest='known_scholar', help="Known Google Scholar user ID or URL.")
-    parser.add_argument('--api-key', dest='api_key', help="SerpAPI key for Google Scholar lookup.")
+    parser.add_argument('--api-key', dest='api_key', help="SerpAPI or Serper.dev key for Google Scholar lookup.")
+    parser.add_argument('--serper-key', dest='serper_key', help="Serper.dev API key for Google Scholar lookup (2,500 free queries).")
     parser.add_argument('--benchmark', '--demo', action='store_true', help="Run benchmark on the 9 original test faculty.")
 
     args = parser.parse_args()
 
+    if args.serper_key:
+        os.environ['SERPER_API_KEY'] = args.serper_key
     if args.api_key:
-        os.environ['SERPAPI_API_KEY'] = args.api_key
+        if len(args.api_key.strip()) == 40 and not args.serper_key:
+            os.environ['SERPER_API_KEY'] = args.api_key
+        else:
+            os.environ['SERPAPI_API_KEY'] = args.api_key
 
     names_to_process = []
     if args.names:
@@ -1442,6 +1743,7 @@ Examples:
             name,
             verbose=verbose,
             serpapi_key=args.api_key,
+            serper_key=args.serper_key,
             known_works=args.known_works,
             known_orcid=args.known_orcid,
             known_scholar=args.known_scholar
