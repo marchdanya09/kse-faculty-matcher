@@ -37,7 +37,7 @@ from rapidfuzz import fuzz
 
 # Import the core matching engine
 try:
-    from faculty_matcher import process_faculty_member, DEFAULT_SERPAPI_KEY
+    from faculty_matcher import process_faculty_member, DEFAULT_SERPAPI_KEY, PATRONYMIC_ENDINGS, transliterate_ukr
 except ImportError:
     print("Error: Could not import 'faculty_matcher'. Ensure it is in the same directory.", file=sys.stderr)
     sys.exit(1)
@@ -168,6 +168,68 @@ def fetch_faculty_teachers_api(
     return teachers
 
 
+def strip_patronymic_tokens(tokens: List[str]) -> List[str]:
+    """Strips patronymic endings ONLY if >= 3 tokens."""
+    if len(tokens) >= 3:
+        if tokens[1].lower().endswith(PATRONYMIC_ENDINGS):
+            return [tokens[0]] + tokens[2:]
+        elif tokens[-1].lower().endswith(PATRONYMIC_ENDINGS):
+            return tokens[:-1]
+    return tokens
+
+
+def match_teacher_name(target_query: str, candidate_name: str) -> bool:
+    """
+    Accurately matches a target query (e.g. 'Власенко' or 'Власенко Марія Олександрівна')
+    against a candidate teacher name. Protects against false homonym matches where two
+    people share first name and patronymic (e.g. 'Чаїнська Марія Олександрівна' vs 'Власенко Марія Олександрівна').
+    """
+    if not target_query or not candidate_name:
+        return False
+
+    t_clean = re.sub(r'[\’\ʼ\`\‘\´\ʻ]', "'", target_query.strip().lower())
+    c_clean = re.sub(r'[\’\ʼ\`\‘\´\ʻ]', "'", candidate_name.strip().lower())
+
+    if t_clean == c_clean:
+        return True
+
+    t_tokens = [t for t in re.split(r'\s+', t_clean) if t]
+    c_tokens = [t for t in re.split(r'\s+', c_clean) if t]
+
+    if not t_tokens or not c_tokens:
+        return False
+
+    t_core = strip_patronymic_tokens(t_tokens)
+    c_core = strip_patronymic_tokens(c_tokens)
+
+    # 1. Single-word target (e.g. user passed just the surname "Власенко")
+    if len(t_core) == 1:
+        target_word = t_core[0]
+        for c_word in c_tokens:
+            if target_word == c_word or fuzz.ratio(target_word, c_word) >= 85:
+                return True
+            if transliterate_ukr(target_word) == transliterate_ukr(c_word):
+                return True
+        return False
+
+    # 2. Multi-word target (e.g. "Власенко Марія" or full 3-token name)
+    # Every core token of the target query MUST match a token in the candidate name.
+    # This strictly prevents "Чаїнська" from matching "Власенко" even if both share "Марія Олександрівна".
+    for t_word in t_core:
+        matched_token = False
+        for c_word in c_core:
+            if t_word == c_word or fuzz.ratio(t_word, c_word) >= 85:
+                matched_token = True
+                break
+            if transliterate_ukr(t_word) == transliterate_ukr(c_word):
+                matched_token = True
+                break
+        if not matched_token:
+            return False
+
+    return True
+
+
 def load_teachers_from_source(
     file_path: Optional[str] = None,
     api_url: Optional[str] = None,
@@ -233,11 +295,10 @@ def load_teachers_from_source(
 
     # Filter by teacher name if requested
     if teacher_name_filter:
-        clean_target = teacher_name_filter.strip().lower()
         matched = []
         for t in teachers_list:
-            t_name = (t.get("name") or "").strip().lower()
-            if clean_target in t_name or fuzz.token_set_ratio(clean_target, t_name) >= 80:
+            t_name = t.get("name") or ""
+            if match_teacher_name(teacher_name_filter, t_name):
                 matched.append(t)
         return effective_faculty, matched
 

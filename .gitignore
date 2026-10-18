@@ -37,3 +37,4 @@ credentials.json
 .DS_Store
 # Isolated external subprojects
 faculty-data/
+teacher_*.json

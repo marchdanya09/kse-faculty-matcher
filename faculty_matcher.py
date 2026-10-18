@@ -1430,6 +1430,8 @@ def process_faculty_member(
 
     gt_reasons = []
     is_gt_verified = False
+    orcid_gt_verified = False
+    scholar_gt_verified = False
 
     # 1. ORCID Resolution (Direct Anchor -> OpenAlex with works -> Direct ORCID with works)
     orcid_info = None
@@ -1437,24 +1439,25 @@ def process_faculty_member(
         orcid_info = resolve_direct_orcid(known_orcid)
         if orcid_info:
             is_gt_verified = True
+            orcid_gt_verified = True
             gt_reasons.append(f"ORCID anchored directly from ground-truth input: {orcid_info.get('orcid_id')}")
 
     alex_data = None
     sample_works = []
     if not orcid_info:
         alex_data = query_openalex(variants, known_works=clean_works)
+        # If known works were supplied, only trust OpenAlex if works matched or author has explicit KSE affiliation
+        if alex_data and clean_works and not alex_data.get('matched_work') and not alex_data.get('has_kse_affiliation'):
+            # Reject OpenAlex candidate as homonym risk!
+            alex_data = None
+
         sample_works = alex_data.get('sample_works', []) if alex_data else []
         if alex_data and alex_data.get('orcid'):
             candidate_orcid = alex_data['orcid'].split('/')[-1]
             verified_alex_orcid = resolve_direct_orcid(candidate_orcid)
             if verified_alex_orcid:
-                orcid_info = {
-                    'orcid_id': candidate_orcid,
-                    'orcid_url': alex_data['orcid'],
-                    'name_in_orcid': verified_alex_orcid.get('name_in_orcid', ''),
-                    'institutions': verified_alex_orcid.get('institutions', []),
-                    'source': 'OpenAlex'
-                }
+                orcid_insts = [str(x).lower() for x in (verified_alex_orcid.get('institutions') or [])]
+                has_kse_cand = any(any(k in inst for k in KSE_INSTITUTION_KEYWORDS) for inst in orcid_insts)
                 alex_matched_work = alex_data.get('matched_work')
                 if not alex_matched_work and clean_works:
                     c_works = fetch_orcid_works(candidate_orcid)
@@ -1465,20 +1468,62 @@ def process_faculty_member(
                                 break
                         if alex_matched_work:
                             break
+
                 if alex_matched_work:
                     is_gt_verified = True
-                    orcid_info['matched_work'] = alex_matched_work
-                    orcid_info['source'] = 'OpenAlex (Ground Truth Publication Match)'
+                    orcid_gt_verified = True
+                    orcid_info = {
+                        'orcid_id': candidate_orcid,
+                        'orcid_url': alex_data['orcid'],
+                        'name_in_orcid': verified_alex_orcid.get('name_in_orcid', ''),
+                        'institutions': verified_alex_orcid.get('institutions', []),
+                        'source': 'OpenAlex (Ground Truth Publication Match)',
+                        'matched_work': alex_matched_work
+                    }
                     gt_reasons.append(f"ORCID verified via ground-truth work: '{alex_matched_work}'")
+                elif clean_works:
+                    # STRICT ANTI-HOMONYM: Known works were provided, but NONE matched.
+                    # Accept candidate only if they have explicit confirmed KSE affiliation!
+                    if has_kse_cand:
+                        orcid_info = {
+                            'orcid_id': candidate_orcid,
+                            'orcid_url': alex_data['orcid'],
+                            'name_in_orcid': verified_alex_orcid.get('name_in_orcid', ''),
+                            'institutions': verified_alex_orcid.get('institutions', []),
+                            'source': 'OpenAlex'
+                        }
+                    else:
+                        orcid_info = None
+                else:
+                    orcid_info = {
+                        'orcid_id': candidate_orcid,
+                        'orcid_url': alex_data['orcid'],
+                        'name_in_orcid': verified_alex_orcid.get('name_in_orcid', ''),
+                        'institutions': verified_alex_orcid.get('institutions', []),
+                        'source': 'OpenAlex'
+                    }
+
         if not orcid_info:
             direct_orcid = query_orcid(variants, known_works=clean_works)
             if direct_orcid:
-                direct_orcid['source'] = 'ORCID API (Direct search)'
+                d_insts = [str(x).lower() for x in (direct_orcid.get('institutions') or [])]
+                d_has_kse = any(any(k in inst for k in KSE_INSTITUTION_KEYWORDS) for inst in d_insts)
                 if direct_orcid.get('matched_work'):
                     is_gt_verified = True
+                    orcid_gt_verified = True
                     direct_orcid['source'] = 'ORCID API (Ground Truth Publication Match)'
                     gt_reasons.append(f"ORCID verified via ground-truth work: '{direct_orcid['matched_work']}'")
-                orcid_info = direct_orcid
+                    orcid_info = direct_orcid
+                elif clean_works:
+                    # If works supplied but no work matched, only accept if explicit KSE affiliation
+                    if d_has_kse:
+                        direct_orcid['source'] = 'ORCID API (Direct search)'
+                        orcid_info = direct_orcid
+                    else:
+                        orcid_info = None
+                else:
+                    direct_orcid['source'] = 'ORCID API (Direct search)'
+                    orcid_info = direct_orcid
     else:
         # If orcid_info was provided directly, also fetch OpenAlex metrics if possible
         alex_data = query_openalex(variants, known_works=clean_works)
@@ -1490,6 +1535,7 @@ def process_faculty_member(
         scholar_info = resolve_direct_scholar(known_scholar, serpapi_key=serpapi_key, serper_key=serper_key)
         if scholar_info:
             is_gt_verified = True
+            scholar_gt_verified = True
             gt_reasons.append(f"Scholar anchored directly from ground-truth input: {scholar_info.get('scholar_id')}")
 
     if not scholar_info and orcid_info and orcid_info.get('orcid_id'):
@@ -1506,6 +1552,7 @@ def process_faculty_member(
         if scholar_info and not scholar_info.get('error'):
             if scholar_info.get('ground_truth_matched') or scholar_info.get('matched_article'):
                 is_gt_verified = True
+                scholar_gt_verified = True
                 m_art = scholar_info.get('matched_article') or (clean_works[0] if clean_works else 'known work')
                 gt_reasons.append(f"Scholar verified via ground-truth article match: '{m_art}'")
 
@@ -1571,10 +1618,27 @@ def process_faculty_member(
         reasons.append("KSE affiliation verified in OpenAlex")
 
     # Status Determination:
-    if is_gt_verified and (orcid_info or scholar_profile):
+    if orcid_gt_verified and scholar_gt_verified:
         status = "VERIFIED (GROUND TRUTH MATCH)"
         confidence = 100
         reasons = gt_reasons + reasons
+    elif is_gt_verified:
+        if orcid_info and scholar_profile:
+            status = "VERIFIED (GROUND TRUTH MATCH)"
+            confidence = 100
+            reasons = gt_reasons + reasons
+        elif scholar_gt_verified and not orcid_info:
+            status = "PARTIAL MATCH (SCHOLAR VERIFIED, ORCID NOT FOUND)"
+            confidence = 85
+            reasons = gt_reasons + reasons
+        elif orcid_gt_verified and not scholar_profile:
+            status = "PARTIAL MATCH (ORCID VERIFIED, SCHOLAR NOT FOUND)"
+            confidence = 85
+            reasons = gt_reasons + reasons
+        else:
+            status = "VERIFIED (GROUND TRUTH MATCH)"
+            confidence = 100
+            reasons = gt_reasons + reasons
     elif confidence >= 80 and (has_any_kse or has_any_partner):
         status = "VERIFIED (AUTO)"
     elif confidence >= 40:
