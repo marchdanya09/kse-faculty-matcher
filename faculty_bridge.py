@@ -25,12 +25,14 @@ independent bridge within 'kse-faculty-matcher'.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import re
 import sys
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
 from rapidfuzz import fuzz
@@ -335,6 +337,168 @@ def load_teachers_from_source(
 
 
 # ==============================================================================
+# INCREMENTAL SYNC & STATE MANAGER (WATERMARK + CONTENT HASHING)
+# ==============================================================================
+class SyncStateManager:
+    """
+    Manages incremental synchronization state (.matcher_state.json) using
+    watermarks, TTL audit windows, and deterministic SHA-256 content hashing.
+    """
+    DEFAULT_STATE_FILE = ".matcher_state.json"
+
+    def __init__(self, state_file: Optional[str] = None, enabled: bool = True):
+        self.state_file = state_file or self.DEFAULT_STATE_FILE
+        self.enabled = enabled
+        self.state: Dict = {
+            "version": "1.0",
+            "updated_at": None,
+            "teachers": {}
+        }
+        if self.enabled:
+            self.load()
+
+    def load(self):
+        if os.path.exists(self.state_file):
+            try:
+                with open(self.state_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    self.state = data
+                    if "teachers" not in self.state or not isinstance(self.state["teachers"], dict):
+                        self.state["teachers"] = {}
+            except Exception as e:
+                print(f"Warning: Could not read state file '{self.state_file}': {e}. Starting with fresh state.", file=sys.stderr)
+                self.state = {"version": "1.0", "updated_at": None, "teachers": {}}
+
+    def save(self):
+        if not self.enabled:
+            return
+        self.state["updated_at"] = datetime.now(timezone.utc).isoformat()
+        tmp_file = f"{self.state_file}.tmp"
+        try:
+            with open(tmp_file, "w", encoding="utf-8") as f:
+                json.dump(self.state, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_file, self.state_file)
+        except Exception:
+            try:
+                with open(self.state_file, "w", encoding="utf-8") as f:
+                    json.dump(self.state, f, indent=2, ensure_ascii=False)
+            except Exception as e:
+                print(f"Warning: Could not save state file '{self.state_file}': {e}", file=sys.stderr)
+
+    @staticmethod
+    def compute_content_hash(name: str, anchors: Dict) -> str:
+        """
+        Computes deterministic SHA-256 hash from teacher's name, publications,
+        and scientometric identifiers.
+        """
+        clean_name = re.sub(r'\s+', ' ', (name or "").strip().lower())
+        works_sorted = sorted([w.strip().lower() for w in (anchors.get("known_works") or []) if w and w.strip()])
+        orcid_val = (anchors.get("known_orcid") or "").strip().lower()
+        scholar_val = (anchors.get("known_scholar") or "").strip().lower()
+        scopus_val = (anchors.get("known_scopus") or "").strip().lower()
+
+        hash_payload = json.dumps({
+            "name": clean_name,
+            "works": works_sorted,
+            "orcid": orcid_val,
+            "scholar": scholar_val,
+            "scopus": scopus_val
+        }, sort_keys=True, ensure_ascii=False)
+
+        return hashlib.sha256(hash_payload.encode("utf-8")).hexdigest()
+
+    def should_process(
+        self,
+        profile_id: str,
+        name: str,
+        content_hash: str,
+        anchors: Dict,
+        mode: str = "incremental",
+        ttl_days: int = 30
+    ) -> Tuple[bool, Optional[Dict], str]:
+        """
+        Determines whether a teacher profile needs re-processing.
+        Returns: (should_run, cached_enriched_item, reason)
+        """
+        if not self.enabled or mode == "force-all":
+            return True, None, "force-all / state disabled"
+
+        # Lookup in state by profile_id or name
+        record = self.state.get("teachers", {}).get(profile_id)
+        if not record and name:
+            for p_id, rec in self.state.get("teachers", {}).items():
+                if rec.get("name") == name:
+                    record = rec
+                    break
+
+        # Mode: new-only
+        if mode == "new-only":
+            has_existing_id = bool(anchors.get("known_orcid") or anchors.get("known_scholar"))
+            if record or has_existing_id:
+                cached = record.get("enriched_item") if record else None
+                return False, cached, "new-only mode: already has scientometrics or state record"
+            return True, None, "new-only mode: unpopulated profile"
+
+        # Mode: incremental (default)
+        if not record:
+            return True, None, "New teacher (not in state)"
+
+        # Check if content changed
+        if record.get("content_hash") != content_hash:
+            return True, None, "Data modified (publications or identifiers changed)"
+
+        status = record.get("status") or ""
+        # If previous status was unresolved, re-check
+        if status.startswith("NEEDS REVIEW") or status.startswith("MISSING") or "ERROR" in status:
+            return True, None, f"Retrying unresolved status ({status})"
+
+        # If previous status was verified (AUTO or GROUND TRUTH)
+        if status.startswith("VERIFIED") or "VERIFIED" in status:
+            # Check TTL
+            last_checked_str = record.get("last_checked")
+            if last_checked_str:
+                try:
+                    last_checked = datetime.fromisoformat(last_checked_str)
+                    if last_checked.tzinfo is None:
+                        last_checked = last_checked.replace(tzinfo=timezone.utc)
+                    age_days = (datetime.now(timezone.utc) - last_checked).total_seconds() / 86400.0
+                    if age_days > ttl_days:
+                        return True, None, f"TTL audit expired ({age_days:.1f} days > {ttl_days}d limit)"
+                except Exception:
+                    pass
+
+            cached_item = record.get("enriched_item")
+            return False, cached_item, f"Verified cache hit (hash unchanged, age < {ttl_days}d)"
+
+        return True, None, "Uncertain status"
+
+    def record_result(
+        self,
+        profile_id: str,
+        name: str,
+        content_hash: str,
+        enriched_item: Dict
+    ):
+        """Stores the resolution result in the state dictionary."""
+        if not self.enabled:
+            return
+
+        res = enriched_item.get("resolution", {})
+        self.state.setdefault("teachers", {})[profile_id] = {
+            "name": name,
+            "content_hash": content_hash,
+            "status": res.get("status"),
+            "confidence_score": res.get("confidence_score"),
+            "orcid": (res.get("orcid") or {}).get("orcid_id"),
+            "scholar": (res.get("scholar") or {}).get("scholar_id"),
+            "discovery_path": res.get("discovery_path"),
+            "last_checked": datetime.now(timezone.utc).isoformat(),
+            "enriched_item": enriched_item
+        }
+
+
+# ==============================================================================
 # BRIDGE RUNNER & ENRICHMENT
 # ==============================================================================
 def run_bridge(
@@ -343,28 +507,66 @@ def run_bridge(
     verbose: bool = True,
     serpapi_key: Optional[str] = None,
     serper_key: Optional[str] = None,
-    limit: Optional[int] = None
+    limit: Optional[int] = None,
+    mode: str = "incremental",
+    state_file: Optional[str] = None,
+    ttl_days: int = 30,
+    use_state: bool = True
 ) -> List[Dict]:
     """
     Iterates through faculty-data teachers, extracts anchors, dispatches to
     faculty_matcher, and returns enriched profiles.
+    Supports incremental synchronization via SyncStateManager.
     """
     enriched_results = []
     to_process = teachers[:limit] if limit else teachers
+    state_mgr = SyncStateManager(state_file=state_file, enabled=use_state)
 
     if verbose:
         print("=" * 80)
-        print(f"🌉 KSE FACULTY DATA BRIDGE: Processing {len(to_process)} teacher(s) from '{faculty_id}'")
+        mode_desc = f"Mode: {mode}" + (f", TTL: {ttl_days}d" if mode == 'incremental' else "")
+        print(f"🌉 KSE FACULTY DATA BRIDGE: Processing {len(to_process)} teacher(s) from '{faculty_id}' [{mode_desc}]")
         print("=" * 80)
+
+    processed_count = 0
+    skipped_count = 0
 
     for idx, teacher in enumerate(to_process, 1):
         anchors = extract_teacher_anchors(teacher)
         name = anchors["name"]
-        profile_id = anchors["profile_id"]
+        clean_name_slug = re.sub(r'\s+', '_', name.lower()) if name else ""
+        clean_fallback_id = f"name_{clean_name_slug}" if clean_name_slug else f"unknown_{idx}"
+        profile_id = anchors["profile_id"] or clean_fallback_id
         works = anchors["known_works"]
         orcid = anchors["known_orcid"]
         scholar = anchors["known_scholar"]
         t_faculty = teacher.get("faculty_id") or faculty_id
+
+        content_hash = SyncStateManager.compute_content_hash(name, anchors)
+
+        should_run, cached_item, decision_reason = state_mgr.should_process(
+            profile_id=profile_id,
+            name=name,
+            content_hash=content_hash,
+            anchors=anchors,
+            mode=mode,
+            ttl_days=ttl_days
+        )
+
+        if not should_run and cached_item:
+            skipped_count += 1
+            if verbose:
+                c_res = cached_item.get("resolution", {})
+                print(f"\n[{idx}/{len(to_process)}] ⏩ [SKIP (CACHED)]: {name}")
+                print(f"  🏢 Profile ID: {profile_id} (Faculty: {t_faculty})")
+                print(f"  💡 Reason: {decision_reason}")
+                print(f"  [STATUS]: {c_res.get('status')} (Score: {c_res.get('confidence_score')}/100)")
+                if c_res.get('discovery_path'):
+                    print(f"  📌 Маршрут пошуку: {c_res.get('discovery_path')}")
+            enriched_results.append(cached_item)
+            continue
+
+        processed_count += 1
 
         # Classification of supplied anchors for display
         anchor_tags = []
@@ -377,8 +579,9 @@ def run_bridge(
         anchor_desc = ", ".join(anchor_tags) if anchor_tags else "Name only"
 
         if verbose:
-            print(f"\n[{idx}/{len(to_process)}] {name}")
+            print(f"\n[{idx}/{len(to_process)}] 🔍 [PROCESS]: {name}")
             print(f"  🏢 Profile ID: {profile_id} (Faculty: {t_faculty})")
+            print(f"  💡 Reason: {decision_reason}")
             print(f"  ⚓ Supplied Anchors: [{anchor_desc}]")
             if works:
                 print(f"  📖 Sample Work: \"{works[0][:75]}...\"" if len(works[0]) > 75 else f"  📖 Sample Work: \"{works[0]}\"")
@@ -460,7 +663,13 @@ def run_bridge(
             },
             "proposed_patch": proposed_patch
         }
+        state_mgr.record_result(profile_id, name, content_hash, enriched_item)
         enriched_results.append(enriched_item)
+
+    state_mgr.save()
+
+    if verbose and use_state:
+        print(f"\n⚡ State sync summary: {processed_count} processed, {skipped_count} skipped (cached). State saved to '{state_mgr.state_file}'.")
 
     return enriched_results
 
@@ -483,6 +692,28 @@ def main():
     parser.add_argument("--serper-key", help="Serper.dev key for Scholar lookups (defaults to SERPER_API_KEY from .env).")
     parser.add_argument("-o", "--output", help="File path to save enriched results JSON.")
     parser.add_argument("-l", "--limit", type=int, help="Limit number of teachers to process.")
+    parser.add_argument(
+        "--mode",
+        choices=["incremental", "new-only", "force-all"],
+        default="incremental",
+        help="Sync mode: 'incremental' (process new/modified or expired TTL; default), 'new-only' (only unpopulated profiles), 'force-all' (re-verify all)."
+    )
+    parser.add_argument(
+        "--state-file",
+        default=".matcher_state.json",
+        help="Path to JSON state file tracking hashes and timestamps (default: .matcher_state.json)."
+    )
+    parser.add_argument(
+        "--ttl-days",
+        type=int,
+        default=30,
+        help="Number of days before a verified profile is re-audited in incremental mode (default: 30)."
+    )
+    parser.add_argument(
+        "--no-state",
+        action="store_true",
+        help="Disable state management and caching entirely."
+    )
     parser.add_argument("--json", action="store_true", help="Output pure JSON to stdout.")
     parser.add_argument("-q", "--quiet", action="store_true", help="Suppress verbose processing logs.")
 
@@ -538,7 +769,11 @@ def main():
         verbose=verbose,
         serpapi_key=serpapi_k,
         serper_key=serper_k,
-        limit=args.limit
+        limit=args.limit,
+        mode=args.mode,
+        state_file=args.state_file,
+        ttl_days=args.ttl_days,
+        use_state=not args.no_state
     )
 
     if args.json or args.output == "-":
