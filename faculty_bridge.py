@@ -37,7 +37,14 @@ from rapidfuzz import fuzz
 
 # Import the core matching engine
 try:
-    from faculty_matcher import process_faculty_member, DEFAULT_SERPAPI_KEY, PATRONYMIC_ENDINGS, transliterate_ukr
+    from faculty_matcher import (
+        process_faculty_member,
+        DEFAULT_SERPAPI_KEY,
+        PATRONYMIC_ENDINGS,
+        transliterate_ukr,
+        transliterate_ru,
+        CitationParser
+    )
 except ImportError:
     print("Error: Could not import 'faculty_matcher'. Ensure it is in the same directory.", file=sys.stderr)
     sys.exit(1)
@@ -67,7 +74,7 @@ def extract_teacher_anchors(teacher: Dict) -> Dict:
     fields = teacher.get("fields") or []
 
     # 1. Extract Publications (Works)
-    works: List[str] = []
+    raw_works: List[str] = []
 
     # Prefer raw cell array in fields if available (lossless)
     for field in fields:
@@ -75,19 +82,25 @@ def extract_teacher_anchors(teacher: Dict) -> Dict:
             for val in field.get("values") or []:
                 clean_val = str(val).strip()
                 if clean_val and len(clean_val) >= 10:
-                    works.append(clean_val)
+                    raw_works.append(clean_val)
 
     # Fallback to comma-joined profile string if fields was empty
-    if not works:
+    if not raw_works:
         raw_indexed = profile.get("indexed_publications") or ""
         raw_fach = profile.get("ukrainian_fach_publications") or ""
         for raw in (raw_indexed, raw_fach):
             if raw:
-                # Split on common delimiters while preserving quoted or full titles
-                for chunk in re.split(r'[\r\n]+', raw):
-                    chunk = chunk.strip().strip(',;"')
-                    if chunk and len(chunk) >= 10:
-                        works.append(chunk)
+                raw_works.append(str(raw).strip())
+
+    # Parse and split citations robustly (handles list numbering, glued DOIs/years, APA, DSTU)
+    works: List[str] = []
+    seen = set()
+    for raw in raw_works:
+        for chunk in CitationParser.split_citations(raw):
+            c_clean = chunk.strip()
+            if c_clean and len(c_clean) >= 10 and c_clean not in seen:
+                seen.add(c_clean)
+                works.append(c_clean)
 
     # 2. Extract ORCID
     known_orcid = None
@@ -205,10 +218,16 @@ def match_teacher_name(target_query: str, candidate_name: str) -> bool:
     # 1. Single-word target (e.g. user passed just the surname "Власенко")
     if len(t_core) == 1:
         target_word = t_core[0]
-        for c_word in c_tokens:
+        tr_t_u = transliterate_ukr(target_word).lower()
+        tr_t_r = transliterate_ru(target_word).lower()
+        for c_word in c_core:
             if target_word == c_word or fuzz.ratio(target_word, c_word) >= 85:
                 return True
-            if transliterate_ukr(target_word) == transliterate_ukr(c_word):
+            tr_c_u = transliterate_ukr(c_word).lower()
+            tr_c_r = transliterate_ru(c_word).lower()
+            if tr_t_u in (tr_c_u, tr_c_r) or tr_t_r in (tr_c_u, tr_c_r):
+                return True
+            if fuzz.ratio(tr_t_u, tr_c_u) >= 85 or fuzz.ratio(tr_t_r, tr_c_r) >= 85:
                 return True
         return False
 
@@ -217,11 +236,18 @@ def match_teacher_name(target_query: str, candidate_name: str) -> bool:
     # This strictly prevents "Чаїнська" from matching "Власенко" even if both share "Марія Олександрівна".
     for t_word in t_core:
         matched_token = False
+        tr_t_u = transliterate_ukr(t_word).lower()
+        tr_t_r = transliterate_ru(t_word).lower()
         for c_word in c_core:
             if t_word == c_word or fuzz.ratio(t_word, c_word) >= 85:
                 matched_token = True
                 break
-            if transliterate_ukr(t_word) == transliterate_ukr(c_word):
+            tr_c_u = transliterate_ukr(c_word).lower()
+            tr_c_r = transliterate_ru(c_word).lower()
+            if tr_t_u in (tr_c_u, tr_c_r) or tr_t_r in (tr_c_u, tr_c_r):
+                matched_token = True
+                break
+            if fuzz.ratio(tr_t_u, tr_c_u) >= 85 or fuzz.ratio(tr_t_r, tr_c_r) >= 85:
                 matched_token = True
                 break
         if not matched_token:
@@ -387,14 +413,17 @@ def run_bridge(
         if anchors["known_scopus"]:
             new_sciento_lines.append(f"Scopus: {anchors['known_scopus']}")
 
+        # Propose PATCH only when verified (strictly prevents auto-patching homonym risks)
+        is_safe_to_patch = (status.startswith("VERIFIED") or "ORCID VERIFIED" in status or "SCHOLAR VERIFIED" in status) and not status.startswith("NEEDS REVIEW")
+
         proposed_patch = {
             "profile": {
                 "scientometrics": "\n".join(new_sciento_lines)
             },
             "versions": {
-                "scientometrics": anchors["field_versions"].get("scientometrics", 1)
+                "scientometrics": anchors["field_versions"].get("scientometrics") or 1
             }
-        } if (discovered_orcid or discovered_scholar) else None
+        } if (discovered_orcid or discovered_scholar) and is_safe_to_patch else None
 
         enriched_item = {
             "profile_id": profile_id,

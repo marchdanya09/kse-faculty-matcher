@@ -18,19 +18,23 @@
         "Universidad Carlos III de Madrid",
         "Universiteit Utrecht"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": {
       "scholar_id": "NWO5_WwAAAAJ",
-      "profile_url": "https://scholar.google.com/citations?user=NWO5_WwAAAAJ&hl=en&oi=ao",
+      "profile_url": "https://scholar.google.com/citations?user=NWO5_WwAAAAJ&hl=en",
       "name": "Tymofii Brik",
-      "affiliations": "Provost (rector), Kyiv School of Economics",
-      "email_verification": "Verified email at kse.org.ua",
+      "affiliations": "Tymofii Brik. Provost (rector), Kyiv School of Economics. Verified email at kse.org.ua - Homepage · Sociology. ArticlesCited byPublic accessCo ...",
+      "email_verification": "kse.org.ua",
       "is_kse_affiliated": true,
-      "cited_by": 1177,
-      "source": "SerpAPI (Google Scholar Engine)",
+      "ground_truth_matched": false,
+      "matched_article": null,
+      "cited_by": null,
+      "source": "Serper.dev (Google Scholar)",
       "match_score": 100
     },
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -55,19 +59,23 @@
         "University of Iowa",
         "Київська школа економіки"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": {
       "scholar_id": "pIv8OrkAAAAJ",
-      "profile_url": "https://scholar.google.com/citations?user=pIv8OrkAAAAJ&hl=en&oi=ao",
+      "profile_url": "https://scholar.google.com/citations?user=pIv8OrkAAAAJ&hl=en",
       "name": "Maksym Obrizan / Максим Обрізан",
-      "affiliations": "Kyiv School of Economics, Kyiv (Ukraine) and Research Consulting & Development",
-      "email_verification": "Verified email at kse.org.ua",
+      "affiliations": "Maksym Obrizan / Максим Обрізан. Kyiv School of Economics, Kyiv (Ukraine) and Research Consulting & Development. Verified ...",
+      "email_verification": "Verified",
       "is_kse_affiliated": true,
-      "cited_by": 1600,
-      "source": "SerpAPI (Google Scholar Engine)",
+      "ground_truth_matched": false,
+      "matched_article": null,
+      "cited_by": null,
+      "source": "Serper.dev (Google Scholar)",
       "match_score": 100
     },
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -103,19 +111,23 @@
         "Woodrow Wilson International Center for Scholars",
         "Yale University"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": {
       "scholar_id": "R6bFCrQAAAAJ",
-      "profile_url": "https://scholar.google.com/citations?user=R6bFCrQAAAAJ&hl=en&oi=ao",
+      "profile_url": "https://scholar.google.com/citations?user=R6bFCrQAAAAJ&hl=en",
       "name": "Volodymyr Kulyk, Володимир Кулик",
-      "affiliations": "",
-      "email_verification": "Verified email at kse.org.ua",
+      "affiliations": "Volodymyr Kulyk, Володимир Кулик. Professor, Kyiv School of Economics. Підтверджена електронна адреса в kse.org.ua ...",
+      "email_verification": "kse.org.ua",
       "is_kse_affiliated": true,
-      "cited_by": 3735,
-      "source": "SerpAPI (Google Scholar Engine)",
+      "ground_truth_matched": false,
+      "matched_article": null,
+      "cited_by": null,
+      "source": "Serper.dev (Google Scholar)",
       "match_score": 100
     },
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -146,19 +158,23 @@
         "National University of “Kyiv-Mohyla Academy”",
         "University of Toronto"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": {
       "scholar_id": "APyBb9UAAAAJ",
-      "profile_url": "https://scholar.google.com/citations?user=APyBb9UAAAAJ&hl=en&oi=ao",
+      "profile_url": "https://scholar.google.com/citations?user=APyBb9UAAAAJ&hl=en",
       "name": "Ivan Gomza",
-      "affiliations": "Associate Professor, Kyiv School of Economics",
-      "email_verification": "Verified email at kse.org.ua",
+      "affiliations": "Ivan Gomza. Associate Professor, Kyiv School of Economics. Verified email at kse.org.ua - Homepage · War and SocietyContentious PoliticsNationalism ...",
+      "email_verification": "kse.org.ua",
       "is_kse_affiliated": true,
-      "cited_by": 262,
-      "source": "SerpAPI (Google Scholar Engine)",
+      "ground_truth_matched": false,
+      "matched_article": null,
+      "cited_by": null,
+      "source": "Serper.dev (Google Scholar)",
       "match_score": 100
     },
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -189,19 +205,23 @@
         "Poltava V.G. Korolenko National Pedagogical University",
         "Shevchenko Scientific Society in the US"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": {
       "scholar_id": "vMd6FToAAAAJ",
-      "profile_url": "https://scholar.google.com/citations?user=vMd6FToAAAAJ&hl=en&oi=ao",
-      "name": "Ігор Сердюк, Igor Serdiuk, Ihor Serdiuk, Igor Serdyuk, Игорь Сердюк",
-      "affiliations": "",
-      "email_verification": "Verified email at kse.org.ua",
+      "profile_url": "https://scholar.google.com/citations?user=vMd6FToAAAAJ&hl=en",
+      "name": "Ігор Сердюк, Igor Serdiuk, Ihor Serdiuk, Igor Serdyuk ...",
+      "affiliations": "Ігор Сердюк, Igor Serdiuk, Ihor Serdiuk, Igor Serdyuk, Игорь Сердюк. Київська школа ...",
+      "email_verification": "Verified",
       "is_kse_affiliated": true,
-      "cited_by": 474,
-      "source": "SerpAPI (Google Scholar Engine)",
+      "ground_truth_matched": false,
+      "matched_article": null,
+      "cited_by": null,
+      "source": "Serper.dev (Google Scholar)",
       "match_score": 100
     },
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -211,22 +231,12 @@
   },
   {
     "input_name": "Сергій Кандул",
-    "status": "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)",
-    "confidence_score": 40,
-    "reasons": [
-      "ORCID found (affiliation unverified)"
-    ],
-    "orcid": {
-      "orcid_id": "0000-0001-8175-2252",
-      "orcid_url": "https://orcid.org/0000-0001-8175-2252",
-      "name_in_orcid": "Serhiy Kandul",
-      "other_names": [],
-      "institutions": [
-        "University of Zurich"
-      ],
-      "source": "ORCID API (Direct search)"
-    },
+    "status": "MISSING / NOT FOUND",
+    "confidence_score": 0,
+    "reasons": [],
+    "orcid": null,
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -241,6 +251,7 @@
     "reasons": [],
     "orcid": null,
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -256,18 +267,16 @@
       "ORCID found (affiliation unverified)"
     ],
     "orcid": {
-      "orcid_id": "0000-0002-5153-9845",
-      "orcid_url": "https://orcid.org/0000-0002-5153-9845",
-      "name_in_orcid": "Natalya Shapoval",
-      "other_names": [
-        "Шаповал Наталья Александровна"
-      ],
-      "institutions": [
-        "Admiral Makarov National University of Shipbuilding"
-      ],
+      "orcid_id": "0000-0001-5712-9663",
+      "orcid_url": "https://orcid.org/0000-0001-5712-9663",
+      "name_in_orcid": "Nataliia Shapoval",
+      "other_names": [],
+      "institutions": [],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -277,22 +286,12 @@
   },
   {
     "input_name": "Вероніка Юрчук",
-    "status": "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)",
-    "confidence_score": 40,
-    "reasons": [
-      "ORCID found (affiliation unverified)"
-    ],
-    "orcid": {
-      "orcid_id": "0009-0003-4389-2440",
-      "orcid_url": "https://orcid.org/0009-0003-4389-2440",
-      "name_in_orcid": "Veronika Yurchuk",
-      "other_names": [],
-      "institutions": [
-        "Vasyl Stefanyk Carpathian National University"
-      ],
-      "source": "ORCID API (Direct search)"
-    },
+    "status": "MISSING / NOT FOUND",
+    "confidence_score": 0,
+    "reasons": [],
+    "orcid": null,
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -302,7 +301,7 @@
   },
   {
     "input_name": "Олена Галицька",
-    "status": "PARTIAL MATCH (NEEDS REVIEW)",
+    "status": "PARTIAL MATCH (ORCID VERIFIED, SCHOLAR NOT FOUND)",
     "confidence_score": 50,
     "reasons": [
       "ORCID confirmed with KSE affiliation"
@@ -315,9 +314,11 @@
       "institutions": [
         "Kyiv School of Economics"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -327,23 +328,26 @@
   },
   {
     "input_name": "Роман Міщенко",
-    "status": "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)",
-    "confidence_score": 40,
+    "status": "PARTIAL MATCH (SCHOLAR VERIFIED, ORCID NOT FOUND)",
+    "confidence_score": 50,
     "reasons": [
-      "ORCID found (affiliation unverified)"
+      "Scholar profile matched (100% with KSE verification)"
     ],
-    "orcid": {
-      "orcid_id": "0009-0006-6922-6552",
-      "orcid_url": "https://orcid.org/0009-0006-6922-6552",
-      "name_in_orcid": "Roman Mishchenko",
-      "other_names": [],
-      "institutions": [
-        "Cherkasy Medical Academy",
-        "Cherkasy Regional Hospital"
-      ],
-      "source": "ORCID API (Direct search)"
+    "orcid": null,
+    "scholar": {
+      "scholar_id": "C4itnuYAAAAJ",
+      "profile_url": "https://scholar.google.com/citations?user=C4itnuYAAAAJ&hl=en",
+      "name": "Roman Mishchenko",
+      "affiliations": "Roman Mishchenko. Lecturer, Kyiv School of Economics. Verified email at kse.org.ua. Title. Sort. Sort by citationsSort by yearSort by title.",
+      "email_verification": "kse.org.ua",
+      "is_kse_affiliated": true,
+      "ground_truth_matched": false,
+      "matched_article": null,
+      "cited_by": null,
+      "source": "Serper.dev (Google Scholar)",
+      "match_score": 100
     },
-    "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -366,9 +370,11 @@
       "institutions": [
         "Taras Shevchenko National University of Kyiv"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -390,19 +396,23 @@
       "name_in_orcid": "Yurii Chopiuk",
       "other_names": [],
       "institutions": [],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": {
       "scholar_id": "WFFjTAIAAAAJ",
-      "profile_url": "https://scholar.google.com/citations?user=WFFjTAIAAAAJ&hl=en&oi=ao",
+      "profile_url": "https://scholar.google.com/citations?user=WFFjTAIAAAAJ&hl=en",
       "name": "Yurii Chopiuk",
-      "affiliations": "Kyiv School of Economics",
-      "email_verification": "Verified email at kse.org.ua",
+      "affiliations": "Yurii Chopiuk. Kyiv School of Economics. Підтверджена електронна адреса в kse.org.ua - Домашня сторінка · абстрактна алгебрафункціональний аналіз.",
+      "email_verification": "kse.org.ua",
       "is_kse_affiliated": true,
-      "cited_by": 60,
-      "source": "SerpAPI (Google Scholar Engine)",
+      "ground_truth_matched": false,
+      "matched_article": null,
+      "cited_by": null,
+      "source": "Serper.dev (Google Scholar)",
       "match_score": 100
     },
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -412,7 +422,7 @@
   },
   {
     "input_name": "Володимир Скочко",
-    "status": "PARTIAL MATCH (NEEDS REVIEW)",
+    "status": "PARTIAL MATCH (ORCID VERIFIED, SCHOLAR NOT FOUND)",
     "confidence_score": 50,
     "reasons": [
       "ORCID confirmed with KSE affiliation"
@@ -425,9 +435,11 @@
       "institutions": [
         "Kyiv School of Economics"
       ],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -448,9 +460,11 @@
       "name_in_orcid": "Serhii Yakovliev",
       "other_names": [],
       "institutions": [],
+      "matched_work": null,
       "source": "ORCID API (Direct search)"
     },
     "scholar": null,
+    "scholar_error": null,
     "metrics": {
       "h_index": 0,
       "citations": 0,
