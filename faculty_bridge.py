@@ -399,6 +399,10 @@ def run_bridge(
         resolved_scholar = (match_res.get("scholar") or {}).get("scholar_id")
         status = match_res.get("status")
         confidence = match_res.get("confidence_score")
+        discovery_path = match_res.get("discovery_path")
+
+        if verbose:
+            print(f"  📌 Маршрут пошуку: {discovery_path}")
 
         # Discoveries (items found by matcher that were missing in original teacher record)
         discovered_orcid = bool(resolved_orcid and not orcid)
@@ -438,6 +442,8 @@ def run_bridge(
             "resolution": {
                 "status": status,
                 "confidence_score": confidence,
+                "discovery_path": discovery_path,
+                "discovery_steps": match_res.get("discovery_steps", []),
                 "reasons": match_res.get("reasons", []),
                 "orcid": match_res.get("orcid"),
                 "scholar": match_res.get("scholar"),

@@ -1947,6 +1947,7 @@ def process_faculty_member(
     scholar_gt_verified = False
     canonical_name = None
     works_res = None
+    discovery_steps: List[str] = []
 
     # =========================================================================
     # STAGE 1: Direct Ground-Truth Anchors Ingestion
@@ -1958,6 +1959,7 @@ def process_faculty_member(
             is_gt_verified = True
             orcid_gt_verified = True
             gt_reasons.append(f"ORCID anchored directly from ground-truth input: {orcid_info.get('orcid_id')}")
+            discovery_steps.append(f"Вхідний ORCID ({orcid_info.get('orcid_id')})")
 
     scholar_info = None
     if known_scholar:
@@ -1966,6 +1968,7 @@ def process_faculty_member(
             is_gt_verified = True
             scholar_gt_verified = True
             gt_reasons.append(f"Scholar anchored directly from ground-truth input: {scholar_info.get('scholar_id')}")
+            discovery_steps.append(f"Вхідний Scholar ID ({scholar_info.get('scholar_id')})")
 
     # =========================================================================
     # STAGE 2: Priority 1 WorksResolver (OpenAlex / Crossref via DOIs & Titles)
@@ -1973,11 +1976,20 @@ def process_faculty_member(
     alex_data = None
     sample_works = []
     if clean_works:
+        discovery_steps.append(f"Публікації з бази ({len(clean_works)} робіт)")
         works_res = resolve_author_from_works(input_name, variants, clean_works)
         if works_res:
             canonical_name = works_res.get('canonical_name')
             if canonical_name and canonical_name not in variants:
                 variants.insert(0, canonical_name)
+            m_doi = works_res.get('matched_doi')
+            if m_doi:
+                discovery_steps.append(f"DOI ({m_doi}) ➔ OpenAlex Works")
+            else:
+                discovery_steps.append("Пошук статті ➔ OpenAlex Works")
+            if canonical_name:
+                discovery_steps.append(f"Канонічне ім'я ({canonical_name})")
+
             works_orcid = works_res.get('orcid_id')
             if works_orcid and not orcid_info:
                 orcid_info = resolve_direct_orcid(works_orcid)
@@ -1986,6 +1998,7 @@ def process_faculty_member(
                     orcid_gt_verified = True
                     m_title = works_res.get('matched_work_title') or (clean_works[0] if clean_works else 'known work')
                     gt_reasons.append(f"ORCID verified via ground-truth work: '{m_title}'")
+                    discovery_steps.append(f"ORCID зі статті ({orcid_info.get('orcid_id')})")
 
             alex_data = {
                 'h_index': works_res.get('h_index', 0),
@@ -2004,6 +2017,7 @@ def process_faculty_member(
             is_gt_verified = True
             scholar_gt_verified = True
             gt_reasons.append(f"Scholar verified via Wikidata cross-link: {scholar_info.get('scholar_id')}")
+            discovery_steps.append(f"Wikidata SPARQL (ORCID ➔ Scholar: {scholar_info.get('scholar_id')})")
 
     if not scholar_info:
         scholar_info = search_google_scholar(
@@ -2016,11 +2030,15 @@ def process_faculty_member(
             is_gt_verified=is_gt_verified
         )
         if scholar_info and not scholar_info.get('error'):
+            engine_name = scholar_info.get('source') or "Google Scholar"
             if scholar_info.get('ground_truth_matched') or scholar_info.get('matched_article') or works_res or is_gt_verified:
                 is_gt_verified = True
                 scholar_gt_verified = True
                 m_art = scholar_info.get('matched_article') or (clean_works[0] if clean_works else 'known work')
                 gt_reasons.append(f"Scholar verified via ground-truth article match: '{m_art}'")
+                discovery_steps.append(f"{engine_name} (за статтею ➔ {scholar_info.get('scholar_id')})")
+            else:
+                discovery_steps.append(f"{engine_name} (за ім'ям ➔ {scholar_info.get('scholar_id')})")
 
     # =========================================================================
     # STAGE 4: Priority 3 OrcidResolver (Direct -> Wikidata SPARQL -> OpenAlex/ORCID)
@@ -2038,6 +2056,7 @@ def process_faculty_member(
             is_gt_verified = True
             orcid_gt_verified = True
             gt_reasons.append(f"ORCID verified via Wikidata cross-link: {orcid_info.get('orcid_id')}")
+            discovery_steps.append(f"Wikidata SPARQL (Scholar ➔ ORCID: {orcid_info.get('orcid_id')})")
 
     if not orcid_info:
         if not alex_data:
@@ -2075,6 +2094,7 @@ def process_faculty_member(
                         'matched_work': alex_matched_work
                     }
                     gt_reasons.append(f"ORCID verified via ground-truth work: '{alex_matched_work}'")
+                    discovery_steps.append(f"OpenAlex (співпадіння статті ➔ ORCID {candidate_orcid})")
                 elif clean_works:
                     if has_kse_cand:
                         orcid_info = {
@@ -2084,6 +2104,7 @@ def process_faculty_member(
                             'institutions': verified_alex_orcid.get('institutions', []),
                             'source': 'OpenAlex'
                         }
+                        discovery_steps.append(f"OpenAlex (KSE афіліація ➔ ORCID {candidate_orcid})")
                     else:
                         orcid_info = None
                 else:
@@ -2094,6 +2115,7 @@ def process_faculty_member(
                         'institutions': verified_alex_orcid.get('institutions', []),
                         'source': 'OpenAlex'
                     }
+                    discovery_steps.append(f"OpenAlex (авторський пошук ➔ ORCID {candidate_orcid})")
 
         if not orcid_info:
             direct_orcid = query_orcid(variants, known_works=clean_works)
@@ -2107,10 +2129,12 @@ def process_faculty_member(
                     direct_orcid['source'] = 'ORCID API (Ground Truth Publication Match)'
                     gt_reasons.append(f"ORCID verified via ground-truth work: '{direct_orcid['matched_work']}'")
                     orcid_info = direct_orcid
+                    discovery_steps.append(f"ORCID API (співпадіння статті ➔ {direct_orcid.get('orcid_id')})")
                 elif clean_works:
                     if d_has_kse or d_has_partner:
                         direct_orcid['source'] = 'ORCID API (Direct search)'
                         orcid_info = direct_orcid
+                        discovery_steps.append(f"ORCID API (KSE/партнерська афіліація ➔ {direct_orcid.get('orcid_id')})")
                     else:
                         orcid_info = None
                 else:
@@ -2121,6 +2145,7 @@ def process_faculty_member(
                     else:
                         direct_orcid['source'] = 'ORCID API (Direct search)'
                         orcid_info = direct_orcid
+                        discovery_steps.append(f"ORCID API (пошук за ім'ям ➔ {direct_orcid.get('orcid_id')})")
     elif not alex_data:
         alex_data = query_openalex(variants, known_works=clean_works)
         sample_works = alex_data.get('sample_works', []) if alex_data else []
@@ -2227,10 +2252,16 @@ def process_faculty_member(
         else:
             status = "MISSING / NOT FOUND"
 
+    if not discovery_steps:
+        discovery_steps.append("Пошук за ПІБ (публічних профілів не виявлено)")
+    discovery_path = " ➔ ".join(discovery_steps)
+
     result = {
         'input_name': input_name,
         'status': status,
         'confidence_score': confidence,
+        'discovery_path': discovery_path,
+        'discovery_steps': discovery_steps,
         'reasons': reasons,
         'orcid': orcid_info,
         'scholar': scholar_profile,
@@ -2246,6 +2277,7 @@ def process_faculty_member(
     if verbose:
         # Summary log
         print(f"  [STATUS]: {status} (Score: {confidence}/100)")
+        print(f"  [DISCOVERY PATH]: {discovery_path}")
         if orcid_info:
             print(f"  [ORCID]: {orcid_info.get('orcid_url')} ({orcid_info.get('source')})")
         else:
