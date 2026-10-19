@@ -1597,7 +1597,8 @@ def search_google_scholar_serper(
                             break
 
                 # If identity is already verified by ground truth or publication anchor, waive external affiliation penalty (GEMINI.md Rule 3.A)
-                is_gt = has_gt_work or is_gt_verified
+                # But strictly require name_sim >= 85 so homonyms (like Kyrylo vs Olena Savchenko) are never falsely auto-verified!
+                is_gt = has_gt_work or (is_gt_verified and name_sim >= 85)
                 if is_kse or is_gt:
                     match_score = min(name_sim + 25, 100) if not is_gt else 100
                     is_kse_flag = True
