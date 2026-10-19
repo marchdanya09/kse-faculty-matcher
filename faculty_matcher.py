@@ -1008,63 +1008,65 @@ def search_scholar_by_article_serper(
     clean_kw = normalize_title(article_title)
     clean_kw = re.sub(r'^[\'"“‘\s]+|[\'"”’\s]+$', '', clean_kw)
 
-    queries_to_try = [f'site:scholar.google.com/citations "{variants[0]}" {clean_kw[:50]}'.strip()]
     if ':' in clean_kw:
         main_t = clean_kw.split(':', 1)[0].strip()
-        if len(main_t) > 15:
-            queries_to_try.append(f'site:scholar.google.com/citations "{variants[0]}" {main_t}'.strip())
+        kw_query = main_t if len(main_t) >= 15 else clean_kw[:50]
+    else:
+        kw_query = clean_kw[:50]
 
-    for q_str in queries_to_try:
-        try:
-            r = safe_serper_post({'q': q_str}, api_key=serper_key, timeout=15, max_retries=2)
-            if r and r.status_code == 200:
-                data = r.json()
-                for item in data.get('organic', []):
-                    link = item.get('link', '')
-                    if 'citations?user=' not in link:
-                        continue
-                    m = re.search(r'user=([a-zA-Z0-9_\-]+)', link)
-                    if not m:
-                        continue
-                    a_id = m.group(1)
-                    raw_title = str(item.get('title') or '')
-                    clean_title = re.sub(r'\s*-\s*.*?(?:Google|Scholar|Академ).*', '', raw_title, flags=re.IGNORECASE).strip()
-                    sub_names = [s.strip() for s in re.split(r'[,/;|]', clean_title) if s.strip()]
-                    name_sim = max(fuzz.token_sort_ratio(v, sub) for v in variants for sub in (sub_names or [clean_title]))
+    author_token = variants[0]
+    q_str = f'site:scholar.google.com/citations "{author_token}" {kw_query}'.strip()
 
-                    if name_sim >= 70:
-                        snippet = str(item.get('snippet') or '').replace('\n', ' ')
-                        is_kse = (
-                            any(k in snippet.lower() for k in KSE_INSTITUTION_KEYWORDS) or
-                            any(k in clean_title.lower() for k in KSE_INSTITUTION_KEYWORDS) or
-                            'kse.org.ua' in snippet.lower()
-                        )
-                        cited_by = None
-                        cited_m = re.search(r'[Cc]ited by\s*([\d,]+)|[Цц]итуван[ья][\s:]*([\d,]+)|[Цц]итат[\s:]*([\d,]+)', snippet)
-                        if cited_m:
-                            for grp in cited_m.groups():
-                                if grp:
-                                    try:
-                                        cited_by = int(grp.replace(',', ''))
-                                        break
-                                    except ValueError:
-                                        pass
+    try:
+        r = safe_serper_post({'q': q_str}, api_key=serper_key, timeout=15, max_retries=1)
+        if r and r.status_code == 200:
+            data = r.json()
+            for item in data.get('organic', []):
+                link = item.get('link', '')
+                if 'citations?user=' not in link:
+                    continue
+                m = re.search(r'user=([a-zA-Z0-9_\-]+)', link)
+                if not m:
+                    continue
+                a_id = m.group(1)
+                raw_title = str(item.get('title') or '')
+                clean_title = re.sub(r'\s*-\s*.*?(?:Google|Scholar|Академ).*', '', raw_title, flags=re.IGNORECASE).strip()
+                sub_names = [s.strip() for s in re.split(r'[,/;|]', clean_title) if s.strip()]
+                name_sim = max(fuzz.token_sort_ratio(v, sub) for v in variants for sub in (sub_names or [clean_title]))
 
-                        return {
-                            'scholar_id': a_id,
-                            'profile_url': f"https://scholar.google.com/citations?user={a_id}&hl=en",
-                            'name': clean_title,
-                            'affiliations': snippet[:160],
-                            'email_verification': 'kse.org.ua' if 'kse.org.ua' in snippet.lower() else ('Verified' if is_kse else 'Unverified'),
-                            'is_kse_affiliated': is_kse,
-                            'source': 'Serper.dev (Publication Co-Citation Anchor)',
-                            'match_score': 100,
-                            'matched_article': article_title,
-                            'ground_truth_matched': True,
-                            'cited_by': cited_by
-                        }
-        except Exception:
-            pass
+                if name_sim >= 70:
+                    snippet = str(item.get('snippet') or '').replace('\n', ' ')
+                    is_kse = (
+                        any(k in snippet.lower() for k in KSE_INSTITUTION_KEYWORDS) or
+                        any(k in clean_title.lower() for k in KSE_INSTITUTION_KEYWORDS) or
+                        'kse.org.ua' in snippet.lower()
+                    )
+                    cited_by = None
+                    cited_m = re.search(r'[Cc]ited by\s*([\d,]+)|[Цц]итуван[ья][\s:]*([\d,]+)|[Цц]итат[\s:]*([\d,]+)', snippet)
+                    if cited_m:
+                        for grp in cited_m.groups():
+                            if grp:
+                                try:
+                                    cited_by = int(grp.replace(',', ''))
+                                    break
+                                except ValueError:
+                                    pass
+
+                    return {
+                        'scholar_id': a_id,
+                        'profile_url': f"https://scholar.google.com/citations?user={a_id}&hl=en",
+                        'name': clean_title,
+                        'affiliations': snippet[:160],
+                        'email_verification': 'kse.org.ua' if 'kse.org.ua' in snippet.lower() else ('Verified' if is_kse else 'Unverified'),
+                        'is_kse_affiliated': is_kse,
+                        'source': 'Serper.dev (Publication Co-Citation Anchor)',
+                        'match_score': 100,
+                        'matched_article': article_title,
+                        'ground_truth_matched': True,
+                        'cited_by': cited_by
+                    }
+    except Exception:
+        pass
     return None
 
 def search_scholar_by_article(
@@ -1685,22 +1687,19 @@ def search_google_scholar(
             if not serper_res.get('error'):
                 return serper_res
             serper_error = serper_res
-        # RULE 3.C: Strictly <= 1 Serper query per faculty member. Budget exhausted.
-        serper_key = None
 
-    # 2. Tier 2: Direct ground-truth article co-citation lookup if known_works provided and SerpAPI available
-    if known_works and (serpapi_key or serper_key):
+    # 2. Tier 2: Ground-truth article co-citation lookup (strictly 1 fallback query for top work if Tier 1 did not find profile)
+    if known_works and (serper_key or serpapi_key):
         target_author = canonical_name or name_variants[0]
-        for kw in known_works[:2]:
-            art_cand = search_scholar_by_article(
-                target_author,
-                kw,
-                name_variants=name_variants,
-                serpapi_key=serpapi_key,
-                serper_key=serper_key
-            )
-            if art_cand:
-                return art_cand
+        art_cand = search_scholar_by_article(
+            target_author,
+            known_works[0],
+            name_variants=name_variants,
+            serpapi_key=serpapi_key,
+            serper_key=serper_key
+        )
+        if art_cand:
+            return art_cand
 
     # 3. Tier 3: Google Programmable Search Engine (100 Free queries/day)
     cse_result = search_google_scholar_cse(name_variants, api_key=google_api_key, cx=google_cse_cx)
