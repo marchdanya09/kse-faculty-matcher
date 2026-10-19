@@ -1,189 +1,188 @@
-# KSE Faculty Academic Profile Matcher
+# KSE Faculty Academic Profile Matcher & Database Sync Bridge
 
-Automated, cost-effective pipeline for discovering, disambiguating, and validating academic profiles (**Google Scholar** and **ORCID iD**) for Kyiv School of Economics (KSE) faculty and researchers.
-
----
-
-## 🚀 Key Features
-
-- **Multi-Tier Resolution Architecture:**
-  - **Tier 1 (100% Free, Zero Ban Risk):** OpenAlex Polite Pool API + Direct ORCID Public API (`v3.0`) + Wikidata SPARQL Bridge (`P496` $\leftrightarrow$ `P1960`).
-  - **Tier 2:** Google Scholar Profile Resolution via SerpAPI with intelligent **Early Exit** optimization (only 1 request per author, 250 free monthly searches).
-  - **Tier 3:** Web search fallback.
-- **Ground Truth Anchored Matching:**
-  - **Publication-Anchored Resolution (`-w`, `--work`):** Deterministically verifies ORCID and Scholar profiles against supplied publication titles via ORCID works records and Google Scholar co-citation links. Solves complex cases (e.g. researchers with external primary affiliations in Scholar) with 100% precision!
-  - **Direct ORCID Anchoring (`--orcid`):** Immediately anchors an author's official ORCID record and cross-resolves Scholar.
-  - **Direct Scholar Anchoring (`--scholar`):** Immediately anchors an author's official Google Scholar profile and cross-resolves ORCID.
-- **Robust Ukrainian Name Handling:**
-  - Official CMU 2010 Ukrainian transliteration standard.
-  - Safe handling of patronymics (*по батькові*) — preserves Slavic surnames like *Прокопович*.
-  - Unicode apostrophe normalization (`’`, `ʼ`, `` ` `` $\rightarrow$ `'`).
-  - Common Latin alias generation (`iy` / `ii` / `y`, `H` / `G`).
-- **Anti-Homonym & Disambiguation Engine:**
-  - Multi-alias splitting: handles authors who list several name forms in their profile title (e.g. `"Ігор Сердюк, Igor Serdiuk, Ihor Serdiuk"`).
-  - Strict institutional affiliation verification: requires verified KSE affiliation (or partner institutions like NaUKMA / NASU / KNU) to achieve `VERIFIED (AUTO)`.
-  - Blocks homonyms from unrelated universities from being falsely matched.
-- **Explicit Diagnostics & Error Visibility:**
-  - Transparent distinction between true absence of a profile and API key / network errors.
-  - Dedicated diagnostic messages for missing keys, invalid credentials (HTTP 401/403), and quota exhaustion (HTTP 429).
+Automated, cost-effective pipeline for discovering, disambiguating, and validating academic profiles (**Google Scholar** and **ORCID iD**) for Kyiv School of Economics (KSE) faculty and researchers, with a safe, non-destructive synchronization bridge to the KSE **Faculty Data** platform.
 
 ---
 
-## 🛠️ Installation & Setup
+## 🏗️ Architecture & End-to-End Pipeline
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/marchdanya09/kse-faculty-matcher.git
-   cd kse-faculty-matcher
-   ```
+The integration between **Faculty Data** and **kse-faculty-matcher** follows a strict, safe, 3-stage pipeline:
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure Environment Variables (Optional):**
-   Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   Set your `SERPAPI_API_KEY` (gives 250 free requests per month, enough for ~200+ faculty members with early exit).  
-   *Note:* You can also pass the API key directly via CLI using `--api-key <key>`.
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ STAGE 1: EXPORT & SANITIZATION (sanitize_faculty_data.py)              │
+│ • Downloads faculty profiles via Faculty Data Admin REST API           │
+│ • Strictly scrubs PII (passports, tax IDs, diploma numbers)            │
+│ • Preserves publications, scientometrics, DOIs, and profile metadata   │
+│ └── Output: all_teachers_sanitized.json                                │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ STAGE 2: PROFILE MATCHING & DISCOVERY BRIDGE (faculty_bridge.py)       │
+│ • Extracts known publications & ground-truth anchors                   │
+│ • Priority 1: OpenAlex Works API (via DOIs / Article Titles)           │
+│ • Priority 2: Wikidata SPARQL Bridge (Free cross-links)                │
+│ • Priority 3: Google Scholar Discovery via Serper.dev (Early Exit)     │
+│ • Incremental Watermark & Content Hashing (.matcher_state.json)        │
+│ └── Output: enriched_all_teachers.json                                 │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ STAGE 3: SAFE DATABASE SYNCHRONIZATION (faculty_db_sync.py)            │
+│ • Safe by default: DRY-RUN with visual Before vs Proposed diff table   │
+│ • Intelligent Preserving Merger (preserves Scopus, WoS, notes)         │
+│ • Optimistic Concurrency Control (OCC) handling (HTTP 409 retry)       │
+│ • Pre-flight automatic snapshot backup (sync_backup_<timestamp>.json)  │
+│ • Quality Gating: strictly writes ONLY confirmed VERIFIED profiles     │
+│ └── Target: KSE Faculty Data Database via Admin PATCH API              │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 📖 CLI Usage
+## 🚀 Step-by-Step Workflow & Bridge Commands
 
-The pipeline supports direct command-line execution with fuzzy matching across **Ukrainian**, **English**, and **Russian** names:
+### Крок 1. Спочатку вивантажуємо та знеособлюємо дані з Faculty Data
+> [!IMPORTANT]
+> **Обов'язковий перший крок:** Перед запуском пошукового моста необхідно вивантажити свіжі профілі викладачів з платформи Faculty Data через утиліту знеособлення `sanitize_faculty_data.py`. Це повністю усуває конфіденційні персональні дані (паспорти, ІПН, дипломи), зберігаючи наукові публікації, статті та наукометрію.
 
-### 1. Single Faculty Lookup:
 ```bash
-# In Ukrainian:
-python3 faculty_matcher.py "Тимофій Брік"
+# Вивантажити всіх викладачів з усіх факультетів у знеособлений файл:
+python3 sanitize_faculty_data.py \
+  --api-key "$FACULTY_DATA_API_KEY" \
+  --faculty all \
+  -o all_teachers_sanitized.json
+```
+*(Скрипт автоматично підключається до бекенду `https://faculty-data-two.vercel.app/api/admin/v1`, обходить усі факультети, видаляє PII та записує чистий файл).*
 
-# In English:
+---
+
+### Крок 2. Запуск інвертованого пошукового моста (`faculty_bridge.py`)
+Після того, як дані вивантажено, запускаємо міст резолюції. Він проганяє викладачів через базу публікацій, знаходить відсутні ORCID та Google Scholar і зберігає всі результати в єдиний структурований файл:
+
+```bash
+# Повний прогін по всіх викладачах:
+python3 faculty_bridge.py \
+  --file all_teachers_sanitized.json \
+  -o enriched_all_teachers.json
+
+# Тестовий прогін на вибірці з 5 викладачів:
+python3 faculty_bridge.py \
+  --file all_teachers_sanitized.json \
+  -l 5 \
+  -o enriched_sample.json
+```
+
+#### Режими інкрементальної синхронізації:
+- `--mode incremental` (за замовчуванням): якщо викладач уже верифікований і його публікації/ПІБ не змінювалися, він пропускається миттєво (`0.001` с, 0 зовнішніх запитів). Повторно перевіряються лише нові або змінені викладачі.
+- `--mode new-only`: опрацьовує виключно викладачів із повністю порожніми полями наукометрії.
+- `--mode force-all`: примусовий повний перерахунок усіх 190+ викладачів з оновленням кешу.
+
+---
+
+### Крок 3. Безпечна синхронізація з базою даних (`faculty_db_sync.py`)
+
+#### 3.1. Безпечний попередній перегляд (Safe Dry-Run — Zero Writes):
+Перед внесенням будь-яких змін перегляньте детальний Before/After diff:
+```bash
+python3 faculty_db_sync.py -i enriched_all_teachers.json
+```
+Ви побачите форматований звіт: які клітинки зараз у базі, які нові посилання будуть додані, та які викладачі пропускаються. **Жодного байту в базу не відправляється.**
+
+#### 3.2. Інтерактивний запис у БД (з підтвердженням [y/N] для кожного викладача):
+Найбезпечніший спосіб для поступового наповнення:
+```bash
+python3 faculty_db_sync.py \
+  -i enriched_all_teachers.json \
+  --api-key "$FACULTY_DATA_WRITE_KEY" \
+  --execute \
+  --prod-confirm \
+  --interactive
+```
+
+#### 3.3. Пакетний запис усіх верифікованих профілів:
+```bash
+python3 faculty_db_sync.py \
+  -i enriched_all_teachers.json \
+  --api-key "$FACULTY_DATA_WRITE_KEY" \
+  --execute \
+  --prod-confirm
+```
+
+#### 3.4. Автоматичний бекап і миттєвий відкат (Rollback):
+Перед кожним записом скрипт зберігає файл `sync_backup_<timestamp>.json`. Якщо знадобиться повернути попередній стан клітинок у базі, виконайте:
+```bash
+python3 faculty_db_sync.py \
+  --restore sync_backup_20261019_030500.json \
+  --api-key "$FACULTY_DATA_WRITE_KEY" \
+  --execute \
+  --prod-confirm
+```
+
+---
+
+## 🛡️ Ключові гарантії збереження даних
+
+1. **Intelligent Preserving Merger (Zero Data Loss):**
+   Функція `merge_scientometrics_cells` зчитує всі наявні клітинки рядка. Вона **строго зберігає** Scopus, Web of Science, ResearcherID та адміністративні примітки, оновлюючи або дописуючи лише канонічні URL `https://orcid.org/...` та `https://scholar.google.com/citations?user=...`.
+2. **Оптимістичне блокування (OCC) та обробка 409 Conflict:**
+   Скрипт передає поточну версію рядка `field_versions["scientometrics"]`. Якщо викладач або адмін паралельно редагував профіль, сервер повертає `409 Conflict` — скрипт автоматично витягує свіжу версію, пере-зливає дані та безпечно повторює запит.
+3. **Quality Gating:**
+   До запису допускаються **виключно** викладачі зі статусом `VERIFIED (AUTO)` або `VERIFIED (GROUND TRUTH MATCH)` з оцінкою $\ge 90/100$. Омоніми та непідтверджені профілі блокуються.
+
+---
+
+## 📖 Автономний CLI Матчера (`faculty_matcher.py`)
+
+Для швидкої точкової перевірки окремих дослідників підтримується автономний CLI (підтримує українську, англійську та транслітерацію):
+
+```bash
+# Пошук за ПІБ:
+python3 faculty_matcher.py "Тимофій Брік"
 python3 faculty_matcher.py "Sergiy Kozerenko"
 
-# In Russian:
-python3 faculty_matcher.py "Сергей Козеренко"
-```
-
-### 2. Disambiguate via Known Publication Title (`-w`, `--work`):
-When an author's profile does not explicitly list KSE in Scholar, supply one of their scientific papers to achieve 100% deterministic matching:
-```bash
+# Детермінований пошук за назвою статті (-w / --work):
 python3 faculty_matcher.py "Mykola Trehub" -w "Determining and determinable factors influencing the size of zone of land-use restriction"
-```
 
-### 3. Anchor Directly via ORCID or Google Scholar ID:
-```bash
-# Anchor by ORCID:
+# Прямий якорний пошук за ORCID або Scholar ID:
 python3 faculty_matcher.py "Mykola Trehub" --orcid "0000-0002-2205-5622"
-
-# Anchor by Scholar User ID:
 python3 faculty_matcher.py "Mykola Trehub" --scholar "QnhQqygAAAAJ"
-```
 
-### 4. Pass SerpAPI Key Directly via CLI:
-```bash
-python3 faculty_matcher.py "Sergiy Kozerenko" --api-key YOUR_SERPAPI_KEY
-```
-
-### 5. Output Pure JSON to stdout (Scripting & Piping):
-```bash
+# Вивід чистого JSON (для пайпів):
 python3 faculty_matcher.py "Тимофій Брік" --json
 ```
 
-### 6. Multiple Names & Save to File:
-```bash
-python3 faculty_matcher.py "Maksym Obrizan" "Павло Прокопович" -o results.json
-```
+---
 
-### 7. Process Batch from File (One name per line or JSON array):
-```bash
-python3 faculty_matcher.py -f faculty_list.txt -o results.json
-```
+## 📊 Верифікаційні бенчмарки
 
-### 8. Silent Mode (Suppress Progress Logs):
-```bash
-python3 faculty_matcher.py -f faculty_list.txt -o results.json --quiet
-```
+Всі модулі покриті автоматизованими тестами регресії:
 
-### 9. Run Verification Benchmark Suites:
 ```bash
-# Standard 9-faculty benchmark:
-python3 faculty_matcher.py --benchmark
+# 1. Бенчмарк якорної верифікації за публікаціями (100% pass rate):
+python3 test_ground_truth.py
 
-# Extended 15-faculty batch benchmark:
+# 2. Бенчмарк 15 нових викладачів KSE (100% pass rate):
 python3 test_new_faculty.py
 
-# Ground-truth publication benchmark (7 faculty members):
-python3 test_ground_truth.py
-```
-
-### 10. Ingest & Enrich from KSE Faculty Data API / Exports (`faculty_bridge.py`):
-```bash
-# Run with mock faculty-data JSON (built-in benchmark):
-python3 faculty_bridge.py --mock -o bridge_results.json
-
-# Process custom JSON export from faculty-data:
-python3 faculty_bridge.py -f my_faculty_export.json -o bridge_results.json
-
-# Live API Ingestion (when API key is available):
-python3 faculty_bridge.py --api-url https://faculty-data-two.vercel.app/api/admin/v1 --api-key YOUR_KEY --faculty social-sciences -o live_results.json
+# 3. Базовий бенчмарк 9 викладачів:
+python3 faculty_matcher.py --benchmark
 ```
 
 ---
 
-## ⚙️ CLI Reference Table
+## 📦 Опис файлів проекту
 
-| Argument / Flag | Description |
+| Файл | Призначення |
 | :--- | :--- |
-| `names ...` | Positional faculty name(s) (supports UKR, ENG, RUS). |
-| `-n`, `--name NAME` | Faculty member name (can be repeated for multiple names). |
-| `-w`, `--work TITLE` | Known scientific publication title belonging to the researcher (can be repeated). |
-| `--orcid ID_OR_URL` | Known ORCID iD or URL (e.g. `0000-0002-2205-5622`). |
-| `--scholar ID_OR_URL` | Known Google Scholar user ID or URL (e.g. `QnhQqygAAAAJ`). |
-| `-f`, `--file PATH` | Path to text file (one name per line) or JSON array of names. |
-| `-o`, `--output PATH` | Path to write output JSON file. |
-| `--api-key KEY` | SerpAPI key for Google Scholar lookup (overrides `.env` / environment). |
-| `--json` | Output pure JSON to stdout (suppresses progress logs for scripting/piping). |
-| `-q`, `--quiet` | Suppress progress and summary messages to stderr/stdout. |
-| `--benchmark`, `--demo` | Run the standard benchmark on the 9 reference faculty members. |
-| `-h`, `--help` | Show command-line help message and exit. |
-
----
-
-## 🛡️ Error Diagnostics & Status Codes
-
-The matcher provides transparent status reporting to eliminate ambiguity between missing profiles, homonyms, and API configuration issues:
-
-| Status Code | Meaning |
-| :--- | :--- |
-| `VERIFIED (GROUND TRUTH MATCH)` | 100% deterministic match confirmed via supplied publication (`-w`), direct ORCID, or direct Scholar anchor. |
-| `VERIFIED (AUTO)` | High-confidence match (ORCID and/or Scholar confirmed with KSE email `@kse.org.ua` or institutional snippet). |
-| `PARTIAL MATCH (NEEDS REVIEW)` | Valid ORCID found with KSE affiliation, but Google Scholar profile is unregistered or not indexed. |
-| `PARTIAL MATCH (SCHOLAR API ERROR)` | Valid ORCID found, but Scholar resolution failed due to an API key or quota issue. |
-| `NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)` | Profile found with matching name, but without confirmed KSE affiliation (blocks false positives). |
-| `MISSING / NOT FOUND` | No matching profiles found across any database (verified absent). |
-| `ERROR (SCHOLAR API KEY ERROR)` | Scholar lookup could not be performed due to missing or invalid API credentials. |
-
-### `[SCHOLAR]` Diagnostic Messages:
-- `[SCHOLAR]: ERROR — API key not configured (set SERPAPI_API_KEY in .env or pass --api-key)`: Key is completely missing.
-- `[SCHOLAR]: ERROR — SerpAPI access denied (HTTP 401: Invalid API key)`: Provided API key is incorrect or expired.
-- `[SCHOLAR]: ERROR — SerpAPI search quota exceeded (HTTP 429: Account out of searches)`: Monthly search limit exhausted.
-- `[SCHOLAR]: No registered profile found`: API call succeeded (HTTP 200) and author legitimately has no public profile.
-
----
-
-## 📊 Verification Benchmark
-
-The pipeline was evaluated across 24 KSE faculty members and researchers across Economics, Sociology, History, Math, and Computer Science:
-
-- **15 profiles `VERIFIED (AUTO)`** with 100% precision (confirmed KSE email `@kse.org.ua`, KSE affiliations, and citations).
-- **6 profiles `PARTIAL MATCH (NEEDS REVIEW)`** accurately identifying registered ORCID with unindexed/absent Scholar profiles.
-- **3 profiles `NEEDS REVIEW (HOMONYM RISK)`** preventing false positive matching against unrelated researchers from other institutions.
-- **7/7 profiles `VERIFIED (GROUND TRUTH MATCH)` (100%)** successfully resolved via supplied publication titles in `test_ground_truth.py`.
-- **0 false positives.**
+| `sanitize_faculty_data.py` | **Крок 1**: Безпечний експортер і PII-санітайзер даних з Faculty Data API. |
+| `faculty_bridge.py` | **Крок 2**: Пошуковий міст (інвертований пайплайн, хешування стану, збереження enriched JSON). |
+| `faculty_db_sync.py` | **Крок 3**: Міст безпечного запису в базу даних (Dry-Run, Diff, Preserving Merger, OCC, Rollback). |
+| `faculty_matcher.py` | Ядро пошуку: транслітерація CMU 2010, OpenAlex, ORCID API, Wikidata SPARQL, Serper Scholar. |
+| `test_ground_truth.py` | Автоматичний тест-раннер якорного пошуку за статтями. |
+| `test_new_faculty.py` | Пакетний тест-раннер викладачів KSE. |
 
 ---
 

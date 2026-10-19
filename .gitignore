@@ -41,6 +41,7 @@ teacher_*.json
 teachers_*.json
 all_teachers_*.json
 test_sample_*.json
+enriched_*.json
 *.state.json
 .*state.json
 .matcher_state.json

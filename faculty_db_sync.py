@@ -357,6 +357,22 @@ def plan_teacher_sync(
             "version": None
         }
 
+    # If item is from enriched output and has explicit discovery tracking:
+    disc = item.get("discoveries") or {}
+    if "new_orcid_discovered" in disc and "new_scholar_discovered" in disc:
+        if not (disc.get("new_orcid_discovered") or disc.get("new_scholar_discovered")):
+            return {
+                "name": name,
+                "faculty_id": faculty_id,
+                "profile_id": profile_id,
+                "action": "ALREADY_IN_SYNC",
+                "reason": "Profile in database already contains verified ORCID and Scholar (no new discoveries).",
+                "status": status,
+                "current_cells": existing_cells,
+                "proposed_cells": existing_cells,
+                "version": field_version
+            }
+
     # Merge cells
     proposed_cells, has_changes = merge_scientometrics_cells(
         existing_cells,
