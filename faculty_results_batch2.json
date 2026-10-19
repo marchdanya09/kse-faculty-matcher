@@ -2,24 +2,25 @@
   {
     "input_name": "Тимофій Брік",
     "status": "VERIFIED (AUTO)",
-    "confidence_score": 100,
+    "confidence_score": 110,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ NWO5_WwAAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0002-5542-1019)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ NWO5_WwAAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0002-5542-1019)"
+    ],
     "reasons": [
       "ORCID confirmed with KSE affiliation",
-      "Scholar profile matched (100% with KSE verification)"
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
     ],
     "orcid": {
       "orcid_id": "0000-0002-5542-1019",
       "orcid_url": "https://orcid.org/0000-0002-5542-1019",
       "name_in_orcid": "TYMOFII BRIK",
-      "other_names": [],
       "institutions": [
-        "Kyiv School of Economics",
-        "Taras Shevchenko National University of Kyiv",
-        "Universidad Carlos III de Madrid",
-        "Universiteit Utrecht"
+        "Kyiv School of Economics"
       ],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "source": "OpenAlex"
     },
     "scholar": {
       "scholar_id": "NWO5_WwAAAAJ",
@@ -36,31 +37,38 @@
     },
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 10,
+      "citations": 669,
+      "works_count": 76
     },
-    "sample_works": []
+    "sample_works": [
+      "Addressing climate change with behavioral science: A global intervention tournament in 63 countries",
+      "The globalizability of temporal discounting",
+      "Explaining Ukraine's resilience to Russia's invasion: The role of local governance"
+    ]
   },
   {
     "input_name": "Максим Обрізан",
     "status": "VERIFIED (AUTO)",
-    "confidence_score": 100,
+    "confidence_score": 110,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ pIv8OrkAAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0002-0924-0671)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ pIv8OrkAAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0002-0924-0671)"
+    ],
     "reasons": [
       "ORCID confirmed with KSE affiliation",
-      "Scholar profile matched (100% with KSE verification)"
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
     ],
     "orcid": {
       "orcid_id": "0000-0002-0924-0671",
       "orcid_url": "https://orcid.org/0000-0002-0924-0671",
       "name_in_orcid": "Maksym Obrizan",
-      "other_names": [],
       "institutions": [
-        "University of Iowa",
         "Київська школа економіки"
       ],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "source": "OpenAlex"
     },
     "scholar": {
       "scholar_id": "pIv8OrkAAAAJ",
@@ -77,42 +85,45 @@
     },
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 12,
+      "citations": 1068,
+      "works_count": 45
     },
-    "sample_works": []
+    "sample_works": [
+      "The Aftermath of Hip Fracture: Discharge Placement, Functional Status Change, and Mortality",
+      "Continuity of Care with a Primary Care Physician and Mortality in Older Adults",
+      "Long-term declines in ADLs, IADLs, and mobility among older Medicare beneficiaries"
+    ]
   },
   {
     "input_name": "Володимир Кулик",
     "status": "VERIFIED (AUTO)",
-    "confidence_score": 100,
+    "confidence_score": 110,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ R6bFCrQAAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0003-2604-715X)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ R6bFCrQAAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0003-2604-715X)"
+    ],
     "reasons": [
       "ORCID confirmed with KSE affiliation",
-      "Scholar profile matched (100% with KSE verification)"
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
     ],
     "orcid": {
       "orcid_id": "0000-0003-2604-715X",
       "orcid_url": "https://orcid.org/0000-0003-2604-715X",
       "name_in_orcid": "Volodymyr Kulyk",
-      "other_names": [],
       "institutions": [
-        "Columbia University",
-        "European Commission against Racism and Intolerance",
-        "George Washington University",
-        "Harvard University",
-        "Institute of Human Sciences",
-        "Institute of Political and Ethnic Studies, National Academy of Sciences of Ukraine",
         "Kyiv School of Economics",
+        "Institute of Political and Ethnic Studies, National Academy of Sciences of Ukraine",
+        "Columbia University",
         "Stanford University",
-        "Stiftung Wissenschaft und Politik, German Institute for International and Security Affairs",
-        "Taras Shevchenko National University of Kyiv",
-        "University of Alberta",
-        "Woodrow Wilson International Center for Scholars",
-        "Yale University"
+        "Yale University",
+        "Columbia University",
+        "Stanford University",
+        "Columbia University"
       ],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "source": "OpenAlex"
     },
     "scholar": {
       "scholar_id": "R6bFCrQAAAAJ",
@@ -129,37 +140,41 @@
     },
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 17,
+      "citations": 1348,
+      "works_count": 65
     },
-    "sample_works": []
+    "sample_works": [
+      "National Identity in Ukraine: Impact of Euromaidan and the War",
+      "Language identity, linguistic diversity and political cleavages: evidence from Ukraine",
+      "Shedding Russianness, recasting Ukrainianness: the post-Euromaidan dynamics of ethnonational identifications in Ukraine"
+    ]
   },
   {
     "input_name": "Іван Гомза",
     "status": "VERIFIED (AUTO)",
-    "confidence_score": 100,
+    "confidence_score": 110,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ APyBb9UAAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0002-0001-5304)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ APyBb9UAAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0002-0001-5304)"
+    ],
     "reasons": [
       "ORCID confirmed with KSE affiliation",
-      "Scholar profile matched (100% with KSE verification)"
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
     ],
     "orcid": {
       "orcid_id": "0000-0002-0001-5304",
       "orcid_url": "https://orcid.org/0000-0002-0001-5304",
       "name_in_orcid": "Ivan Gomza",
-      "other_names": [
-        "Іван Гомза"
-      ],
       "institutions": [
-        "College of William & Mary",
-        "Communist and Post-Communist Studies",
-        "George Washington University",
         "Kyiv School of Economics",
-        "National University of “Kyiv-Mohyla Academy”",
-        "University of Toronto"
+        "Kyiv School of Economics",
+        "Kyiv School of Economics",
+        "National University of “Kyiv-Mohyla Academy”"
       ],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "source": "OpenAlex"
     },
     "scholar": {
       "scholar_id": "APyBb9UAAAAJ",
@@ -176,37 +191,41 @@
     },
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 5,
+      "citations": 81,
+      "works_count": 33
     },
-    "sample_works": []
+    "sample_works": [
+      "The War in Ukraine: Putin's Inevitable Invasion",
+      "Pandemic Politics in Eurasia: Roadmap for a New Research Subfield",
+      "Black Sun Rising: Political Opportunity Structure Perceptions and Institutionalization of the Azov Movement in Post-Euromaidan Ukraine"
+    ]
   },
   {
     "input_name": "Ігор Сердюк",
     "status": "VERIFIED (AUTO)",
-    "confidence_score": 100,
+    "confidence_score": 110,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ vMd6FToAAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0002-8930-1410)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ vMd6FToAAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0002-8930-1410)"
+    ],
     "reasons": [
       "ORCID confirmed with KSE affiliation",
-      "Scholar profile matched (100% with KSE verification)"
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
     ],
     "orcid": {
       "orcid_id": "0000-0002-8930-1410",
       "orcid_url": "https://orcid.org/0000-0002-8930-1410",
       "name_in_orcid": "Igor Serdiuk",
-      "other_names": [
-        "Ігор Олександрович Сердюк"
-      ],
       "institutions": [
-        "CEFRES",
-        "Centre for Advanced Study",
+        "Kyiv School of Economics",
         "Kyiv School of Economics",
         "National University of Kyiv Mohyla Academy",
-        "Poltava V.G. Korolenko National Pedagogical University",
-        "Shevchenko Scientific Society in the US"
+        "Poltava V.G. Korolenko National Pedagogical University"
       ],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "source": "OpenAlex"
     },
     "scholar": {
       "scholar_id": "vMd6FToAAAAJ",
@@ -223,35 +242,65 @@
     },
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 2,
+      "citations": 12,
+      "works_count": 18
     },
-    "sample_works": []
+    "sample_works": [
+      "Historical Demography in Ukraine: From “Political Arithmetic” to Non-Political History",
+      "Causes of Death in 19th-Century Ukraine. Parish Registers, Data Quality, and Source-Critical Analysis",
+      "THE CONSTITUTION OF UKRAINE AS THE MOST IMPORTANT LEGAL GUARANTEE OF SOVEREIGNTY AND TERRITORIAL INTEGRITY OF THE NATION"
+    ]
   },
   {
     "input_name": "Сергій Кандул",
-    "status": "MISSING / NOT FOUND",
-    "confidence_score": 0,
-    "reasons": [],
-    "orcid": null,
-    "scholar": null,
-    "scholar_error": null,
-    "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+    "status": "PARTIAL MATCH (SCHOLAR API ERROR)",
+    "confidence_score": 50,
+    "discovery_path": "OpenAlex (авторський пошук ➔ ORCID 0000-0001-8175-2252)",
+    "discovery_steps": [
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0001-8175-2252)"
+    ],
+    "reasons": [
+      "ORCID found (affiliation unverified)",
+      "Scholar lookup skipped: API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)",
+      "KSE affiliation verified in OpenAlex"
+    ],
+    "orcid": {
+      "orcid_id": "0000-0001-8175-2252",
+      "orcid_url": "https://orcid.org/0000-0001-8175-2252",
+      "name_in_orcid": "Serhiy Kandul",
+      "institutions": [
+        "University of Zurich"
+      ],
+      "source": "OpenAlex"
     },
-    "sample_works": []
+    "scholar": null,
+    "scholar_error": "API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)",
+    "metrics": {
+      "h_index": 8,
+      "citations": 211,
+      "works_count": 70
+    },
+    "sample_works": [
+      "Capable but Amoral? Comparing AI and Human Expert Collaboration in Ethical Decision Making",
+      "Who is controlling whom? Reframing “meaningful human control” of AI systems in security",
+      "Social comparison and energy conservation in a collective action context: A field experiment"
+    ]
   },
   {
     "input_name": "Олена Бєсєдіна",
-    "status": "MISSING / NOT FOUND",
+    "status": "ERROR (SCHOLAR API KEY ERROR)",
     "confidence_score": 0,
-    "reasons": [],
+    "discovery_path": "Пошук за ПІБ (публічних профілів не виявлено)",
+    "discovery_steps": [
+      "Пошук за ПІБ (публічних профілів не виявлено)"
+    ],
+    "reasons": [
+      "Scholar lookup skipped: API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)"
+    ],
     "orcid": null,
     "scholar": null,
-    "scholar_error": null,
+    "scholar_error": "API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)",
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -261,10 +310,16 @@
   },
   {
     "input_name": "Наталія Шаповал",
-    "status": "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)",
-    "confidence_score": 40,
+    "status": "PARTIAL MATCH (NEEDS REVIEW)",
+    "confidence_score": 50,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ CnPAXuIAAAAJ) ➔ ORCID API (пошук за ім'ям ➔ 0000-0001-5712-9663)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ CnPAXuIAAAAJ)",
+      "ORCID API (пошук за ім'ям ➔ 0000-0001-5712-9663)"
+    ],
     "reasons": [
-      "ORCID found (affiliation unverified)"
+      "ORCID found (affiliation unverified)",
+      "KSE affiliation verified in OpenAlex"
     ],
     "orcid": {
       "orcid_id": "0000-0001-5712-9663",
@@ -278,20 +333,30 @@
     "scholar": null,
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 6,
+      "citations": 113,
+      "works_count": 13
     },
-    "sample_works": []
+    "sample_works": [
+      "Government by Code? Blockchain Applications to Public Sector Governance",
+      "The political economy of public procurement in Ukraine",
+      "Russian Oil Exports Under International Sanctions"
+    ]
   },
   {
     "input_name": "Вероніка Юрчук",
-    "status": "MISSING / NOT FOUND",
+    "status": "ERROR (SCHOLAR API KEY ERROR)",
     "confidence_score": 0,
-    "reasons": [],
+    "discovery_path": "Пошук за ПІБ (публічних профілів не виявлено)",
+    "discovery_steps": [
+      "Пошук за ПІБ (публічних профілів не виявлено)"
+    ],
+    "reasons": [
+      "Scholar lookup skipped: API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)"
+    ],
     "orcid": null,
     "scholar": null,
-    "scholar_error": null,
+    "scholar_error": "API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)",
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -301,39 +366,64 @@
   },
   {
     "input_name": "Олена Галицька",
-    "status": "PARTIAL MATCH (ORCID VERIFIED, SCHOLAR NOT FOUND)",
-    "confidence_score": 50,
+    "status": "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)",
+    "confidence_score": 40,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ eKxjOX8AAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0003-0677-2071)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ eKxjOX8AAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0003-0677-2071)"
+    ],
     "reasons": [
-      "ORCID confirmed with KSE affiliation"
+      "ORCID found (affiliation unverified)"
     ],
     "orcid": {
-      "orcid_id": "0009-0001-3988-2691",
-      "orcid_url": "https://orcid.org/0009-0001-3988-2691",
-      "name_in_orcid": "Olena Galytska",
-      "other_names": [],
+      "orcid_id": "0000-0003-0677-2071",
+      "orcid_url": "https://orcid.org/0000-0003-0677-2071",
+      "name_in_orcid": "Olena Halytska",
       "institutions": [
-        "Kyiv School of Economics"
+        "Lesya Ukrainka Volyn National University",
+        "Волинське обласне відділення МАН України",
+        "University of Vechta",
+        "Sprachlernzentrum (Goethe Institut Ukraine)"
       ],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "source": "OpenAlex"
     },
     "scholar": null,
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 1,
+      "citations": 2,
+      "works_count": 28
     },
-    "sample_works": []
+    "sample_works": [
+      "SPECIFICITY OF CONNOTATION MEANING OF MERKEL-EPONYMS (TO «THEORETICAL COURSE OF THE SECOND FOREIGN LANGUAGE (GERMAN)»)",
+      "MODERN ACADEMIC LECTURE: QUO VADIS",
+      "Таксономічний аспект дослідження дискурсу (огляд)"
+    ]
   },
   {
     "input_name": "Роман Міщенко",
-    "status": "PARTIAL MATCH (SCHOLAR VERIFIED, ORCID NOT FOUND)",
-    "confidence_score": 50,
+    "status": "VERIFIED (AUTO)",
+    "confidence_score": 90,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ C4itnuYAAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0003-1027-0541)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ C4itnuYAAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0003-1027-0541)"
+    ],
     "reasons": [
+      "ORCID found (affiliation unverified)",
       "Scholar profile matched (100% with KSE verification)"
     ],
-    "orcid": null,
+    "orcid": {
+      "orcid_id": "0000-0003-1027-0541",
+      "orcid_url": "https://orcid.org/0000-0003-1027-0541",
+      "name_in_orcid": "Роман Міщенко",
+      "institutions": [
+        "Національний унівеситет \"Полтавська політехніка імені Юрія Кондратюка\"",
+        "National University «Yuri Kondratyuk Poltava Polytechnic»"
+      ],
+      "source": "OpenAlex"
+    },
     "scholar": {
       "scholar_id": "C4itnuYAAAAJ",
       "profile_url": "https://scholar.google.com/citations?user=C4itnuYAAAAJ&hl=en",
@@ -349,18 +439,27 @@
     },
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 3,
+      "citations": 28,
+      "works_count": 23
     },
-    "sample_works": []
+    "sample_works": [
+      "Public Cadastral Maps as a Basis for a Construction of the Building General Layout",
+      "Energy performance of buildings in European Union countries and Ukraine",
+      "Design of Agricultural Buildings in the Conditions of Agroecological Farming"
+    ]
   },
   {
     "input_name": "Тетяна Прощенко",
-    "status": "PARTIAL MATCH (NEEDS REVIEW)",
+    "status": "PARTIAL MATCH (SCHOLAR API ERROR)",
     "confidence_score": 45,
+    "discovery_path": "ORCID API (пошук за ім'ям ➔ 0000-0002-7885-663X)",
+    "discovery_steps": [
+      "ORCID API (пошук за ім'ям ➔ 0000-0002-7885-663X)"
+    ],
     "reasons": [
-      "ORCID confirmed with partner institution"
+      "ORCID confirmed with partner institution",
+      "Scholar lookup skipped: API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)"
     ],
     "orcid": {
       "orcid_id": "0000-0002-7885-663X",
@@ -374,7 +473,7 @@
       "source": "ORCID API (Direct search)"
     },
     "scholar": null,
-    "scholar_error": null,
+    "scholar_error": "API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)",
     "metrics": {
       "h_index": 0,
       "citations": 0,
@@ -385,19 +484,23 @@
   {
     "input_name": "Юрій Чоп'юк",
     "status": "VERIFIED (AUTO)",
-    "confidence_score": 90,
+    "confidence_score": 100,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ WFFjTAIAAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0002-0594-3214)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ WFFjTAIAAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0002-0594-3214)"
+    ],
     "reasons": [
       "ORCID found (affiliation unverified)",
-      "Scholar profile matched (100% with KSE verification)"
+      "Scholar profile matched (100% with KSE verification)",
+      "KSE affiliation verified in OpenAlex"
     ],
     "orcid": {
       "orcid_id": "0000-0002-0594-3214",
       "orcid_url": "https://orcid.org/0000-0002-0594-3214",
       "name_in_orcid": "Yurii Chopiuk",
-      "other_names": [],
       "institutions": [],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "source": "OpenAlex"
     },
     "scholar": {
       "scholar_id": "WFFjTAIAAAAJ",
@@ -414,62 +517,82 @@
     },
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 1,
+      "citations": 1,
+      "works_count": 1
     },
-    "sample_works": []
+    "sample_works": [
+      "Symmetric Functions and Rings of Multinumbers Associated with Finite Groups"
+    ]
   },
   {
     "input_name": "Володимир Скочко",
-    "status": "PARTIAL MATCH (ORCID VERIFIED, SCHOLAR NOT FOUND)",
-    "confidence_score": 50,
+    "status": "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)",
+    "confidence_score": 40,
+    "discovery_path": "OpenAlex (авторський пошук ➔ ORCID 0000-0002-1709-2621)",
+    "discovery_steps": [
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0002-1709-2621)"
+    ],
     "reasons": [
-      "ORCID confirmed with KSE affiliation"
+      "ORCID found (affiliation unverified)",
+      "Scholar lookup skipped: API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)"
     ],
     "orcid": {
-      "orcid_id": "0009-0003-2388-0231",
-      "orcid_url": "https://orcid.org/0009-0003-2388-0231",
+      "orcid_id": "0000-0002-1709-2621",
+      "orcid_url": "https://orcid.org/0000-0002-1709-2621",
       "name_in_orcid": "Volodymyr Skochko",
-      "other_names": [],
-      "institutions": [
-        "Kyiv School of Economics"
-      ],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "institutions": [],
+      "source": "OpenAlex"
     },
     "scholar": null,
-    "scholar_error": null,
+    "scholar_error": "API key not configured (set SERPER_API_KEY or SERPAPI_API_KEY in .env or pass --api-key)",
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 5,
+      "citations": 60,
+      "works_count": 36
     },
-    "sample_works": []
+    "sample_works": [
+      "Inspection of war-damaged buildings and structures by the example of urban settlement Borodianka",
+      "Modern Restoration Methods For Damaged Historical Buildings As A Result of Military Aggression. Case of Educational Institutions",
+      "Minimization of Heat Losses in District Heating Networks by Optimizing their Configuration"
+    ]
   },
   {
     "input_name": "Сергій Яковлєв",
     "status": "NEEDS REVIEW (HOMONYM RISK / UNVERIFIED AFFILIATION)",
     "confidence_score": 40,
+    "discovery_path": "Serper.dev (Google Scholar) (за ім'ям ➔ 40BUMd0AAAAJ) ➔ OpenAlex (авторський пошук ➔ ORCID 0000-0002-5647-5043)",
+    "discovery_steps": [
+      "Serper.dev (Google Scholar) (за ім'ям ➔ 40BUMd0AAAAJ)",
+      "OpenAlex (авторський пошук ➔ ORCID 0000-0002-5647-5043)"
+    ],
     "reasons": [
       "ORCID found (affiliation unverified)"
     ],
     "orcid": {
-      "orcid_id": "0009-0006-5028-2685",
-      "orcid_url": "https://orcid.org/0009-0006-5028-2685",
-      "name_in_orcid": "Serhii Yakovliev",
-      "other_names": [],
-      "institutions": [],
-      "matched_work": null,
-      "source": "ORCID API (Direct search)"
+      "orcid_id": "0000-0002-5647-5043",
+      "orcid_url": "https://orcid.org/0000-0002-5647-5043",
+      "name_in_orcid": "Serge Yakovliev",
+      "institutions": [
+        "National Technical University of Ukraine “Igor Sikorsky Kyiv Polytechnic Institute”",
+        "National Technical University of Ukraine “Igor Sikorsky Kyiv Polytechnic Institute”",
+        "National Technical University of Ukraine “Igor Sikorsky Kyiv Polytechnic Institute”",
+        "National Technical University of Ukraine \"Kyiv Polytechnic Institute\"",
+        "National Technical University of Ukraine \"Kyiv Polytechnic Institute\""
+      ],
+      "source": "OpenAlex"
     },
     "scholar": null,
     "scholar_error": null,
     "metrics": {
-      "h_index": 0,
-      "citations": 0,
-      "works_count": 0
+      "h_index": 1,
+      "citations": 12,
+      "works_count": 23
     },
-    "sample_works": []
+    "sample_works": [
+      "Cryptographic Properties of a New National Encryption Standard of Ukraine",
+      "Differential-Rotational Probabilities of Modular Addition and Its Approximations",
+      "Differential properties of LRX-analogues of small constant multiplication"
+    ]
   }
 ]
