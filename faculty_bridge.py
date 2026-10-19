@@ -449,24 +449,36 @@ class SyncStateManager:
             return True, None, "Data modified (publications or identifiers changed)"
 
         status = record.get("status") or ""
-        # If previous status was unresolved, re-check
-        if status.startswith("NEEDS REVIEW") or status.startswith("MISSING") or "ERROR" in status:
-            return True, None, f"Retrying unresolved status ({status})"
+
+        # Calculate age since last check
+        last_checked_str = record.get("last_checked")
+        age_days = 0.0
+        if last_checked_str:
+            try:
+                last_checked = datetime.fromisoformat(last_checked_str)
+                if last_checked.tzinfo is None:
+                    last_checked = last_checked.replace(tzinfo=timezone.utc)
+                age_days = (datetime.now(timezone.utc) - last_checked).total_seconds() / 86400.0
+            except Exception:
+                pass
+
+        # If previous status was unresolved (MISSING / NOT FOUND or NEEDS REVIEW),
+        # only retry if TTL expired (default 7 days) or content changed.
+        if status.startswith("NEEDS REVIEW") or status.startswith("MISSING"):
+            unresolved_ttl = min(ttl_days, 7)
+            if age_days > unresolved_ttl:
+                return True, None, f"Retrying unresolved status ({status}, checked {age_days:.1f}d ago > {unresolved_ttl}d)"
+            cached_item = record.get("enriched_item")
+            return False, cached_item, f"Unresolved cache hit ({status}, checked {age_days:.1f}d ago < {unresolved_ttl}d)"
+
+        # If previous status had an execution error, retry immediately
+        if "ERROR" in status:
+            return True, None, f"Retrying errored status ({status})"
 
         # If previous status was verified (AUTO or GROUND TRUTH)
         if status.startswith("VERIFIED") or "VERIFIED" in status:
-            # Check TTL
-            last_checked_str = record.get("last_checked")
-            if last_checked_str:
-                try:
-                    last_checked = datetime.fromisoformat(last_checked_str)
-                    if last_checked.tzinfo is None:
-                        last_checked = last_checked.replace(tzinfo=timezone.utc)
-                    age_days = (datetime.now(timezone.utc) - last_checked).total_seconds() / 86400.0
-                    if age_days > ttl_days:
-                        return True, None, f"TTL audit expired ({age_days:.1f} days > {ttl_days}d limit)"
-                except Exception:
-                    pass
+            if age_days > ttl_days:
+                return True, None, f"TTL audit expired ({age_days:.1f} days > {ttl_days}d limit)"
 
             cached_item = record.get("enriched_item")
             return False, cached_item, f"Verified cache hit (hash unchanged, age < {ttl_days}d)"
