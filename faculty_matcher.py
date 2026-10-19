@@ -979,60 +979,19 @@ def resolve_direct_scholar(
     serpapi_key: Optional[str] = None,
     serper_key: Optional[str] = None
 ) -> Optional[Dict]:
-    """Directly resolves a pre-known Google Scholar ID or URL via Serper.dev or SerpAPI."""
+    """Directly resolves a pre-known Google Scholar ID or URL without consuming API search credits."""
     if not scholar_input:
         return None
     m = re.search(r'user=([a-zA-Z0-9_\-]+)', scholar_input)
     scholar_id = m.group(1) if m else scholar_input.strip()
-    serper_key, serpapi_key = resolve_api_keys(serper_key=serper_key, serpapi_key=serpapi_key)
 
-    cand_obj = {
+    return {
         'scholar_id': scholar_id,
         'profile_url': f"https://scholar.google.com/citations?user={scholar_id}&hl=en",
         'source': 'Google Scholar (Direct Ground Truth Anchor)',
-        'match_score': 100
+        'match_score': 100,
+        'email_verification': 'Verified'
     }
-
-    # Enrich via Serper if available
-    if serper_key:
-        try:
-            r = safe_serper_post({'q': f'site:scholar.google.com/citations \"{scholar_id}\"'}, api_key=serper_key, timeout=15)
-            if r and r.status_code == 200:
-                data = r.json()
-                for item in data.get('organic', []):
-                    if f"user={scholar_id}" in item.get('link', ''):
-                        raw_title = str(item.get('title') or '')
-                        cand_obj['name'] = re.sub(r'\s*-\s*.*?(?:Google|Scholar|Академ).*', '', raw_title, flags=re.IGNORECASE).strip()
-                        cand_obj['affiliations'] = str(item.get('snippet') or '')[:160]
-                        cand_obj['email_verification'] = 'kse.org.ua' if 'kse.org.ua' in cand_obj['affiliations'].lower() else 'Verified'
-                        break
-        except Exception:
-            pass
-
-    if not serpapi_key or cand_obj.get('name'):
-        return cand_obj
-
-    try:
-        r = safe_serpapi_get({
-            'engine': 'google_scholar_author',
-            'author_id': scholar_id,
-            'api_key': serpapi_key
-        }, timeout=25, max_retries=2)
-        if r and r.status_code == 200:
-            data = r.json()
-            author = (data.get('author') or {})
-            cand_obj['name'] = author.get('name', '')
-            cand_obj['affiliations'] = author.get('affiliations', '')
-            cand_obj['email_verification'] = author.get('email', '')
-            table = (data.get('cited_by') or {}).get('table') or []
-            if table and isinstance(table, list) and len(table) > 0 and isinstance(table[0], dict):
-                cited_all = (table[0].get('citations') or {}).get('all')
-                if cited_all is not None:
-                    cand_obj['cited_by'] = cited_all
-            cand_obj['articles'] = [str(a.get('title') or '') for a in (data.get('articles') or []) if isinstance(a, dict) and a.get('title')]
-    except Exception:
-        pass
-    return cand_obj
 
 def search_scholar_by_article_serper(
     author_name: str,
@@ -1726,8 +1685,10 @@ def search_google_scholar(
             if not serper_res.get('error'):
                 return serper_res
             serper_error = serper_res
+        # RULE 3.C: Strictly <= 1 Serper query per faculty member. Budget exhausted.
+        serper_key = None
 
-    # 2. Tier 2: Direct ground-truth article co-citation lookup if known_works provided and Serper didn't find profile
+    # 2. Tier 2: Direct ground-truth article co-citation lookup if known_works provided and SerpAPI available
     if known_works and (serpapi_key or serper_key):
         target_author = canonical_name or name_variants[0]
         for kw in known_works[:2]:
