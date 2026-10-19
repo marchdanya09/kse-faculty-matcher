@@ -44,4 +44,5 @@ test_sample_*.json
 *.state.json
 .*state.json
 .matcher_state.json
+sync_backup_*.json
 *.tmp
