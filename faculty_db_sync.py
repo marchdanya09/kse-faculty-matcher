@@ -539,12 +539,19 @@ Examples:
         print("Error: Specify an input file via -i / --input.", file=sys.stderr)
         sys.exit(1)
 
-    if not os.path.exists(args.input):
-        print(f"Error: Input file '{args.input}' not found.", file=sys.stderr)
-        sys.exit(1)
+    if args.input == "-":
+        try:
+            input_data = json.load(sys.stdin)
+        except Exception as e:
+            print(f"Error reading JSON from stdin: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        if not os.path.exists(args.input):
+            print(f"Error: Input file '{args.input}' not found.", file=sys.stderr)
+            sys.exit(1)
 
-    with open(args.input, "r", encoding="utf-8") as f:
-        input_data = json.load(f)
+        with open(args.input, "r", encoding="utf-8") as f:
+            input_data = json.load(f)
 
     # Ingest teachers list from enriched format, list of items, or state file
     items: List[Dict] = []
