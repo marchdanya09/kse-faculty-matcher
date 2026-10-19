@@ -214,11 +214,13 @@ class FacultyDataApiClient:
         profile_id: str,
         new_cells: List[str],
         expected_version: int,
+        force_exact_cells: bool = False,
         max_retries: int = 3
     ) -> Dict:
         """
         Sends HTTP PATCH to update 'scientometrics' with Optimistic Concurrency Control.
         Automatically handles HTTP 409 Conflict with fresh re-fetch and retry.
+        When force_exact_cells=True (e.g. during rollback), new_cells is restored as-is without re-merging.
         """
         url = f"{self.base_url}/faculties/{faculty_id}/teachers/{profile_id}"
 
@@ -263,12 +265,14 @@ class FacultyDataApiClient:
                         latest_v = latest_versions.get("scientometrics")
                         if latest_v is not None:
                             curr_version = latest_v
-                            # Re-merge to ensure we don't clobber any intervening admin edit
-                            latest_cells = extract_existing_scientometrics_cells(latest_t)
-                            clean_orcid = next((c for c in curr_cells if "orcid.org" in c), None)
-                            clean_scholar = next((c for c in curr_cells if "scholar.google" in c), None)
-                            remerged, _ = merge_scientometrics_cells(latest_cells, clean_orcid, clean_scholar)
-                            curr_cells = remerged
+                            # In normal sync, re-merge so we don't clobber any intervening admin edits.
+                            # In rollback/restore mode (force_exact_cells=True), keep exact original cells.
+                            if not force_exact_cells:
+                                latest_cells = extract_existing_scientometrics_cells(latest_t)
+                                clean_orcid = next((c for c in curr_cells if "orcid.org" in c), None)
+                                clean_scholar = next((c for c in curr_cells if "scholar.google" in c), None)
+                                remerged, _ = merge_scientometrics_cells(latest_cells, clean_orcid, clean_scholar)
+                                curr_cells = remerged
                             continue
                     raise RuntimeError(f"HTTP 409 Conflict: Version {curr_version} is stale for profile '{profile_id}'. {err_body}")
                 elif e.code == 403:
@@ -538,10 +542,26 @@ Examples:
             orig_cells = snap["original_cells"]
             orig_ver = snap["original_version"]
 
-            print(f"• Restoring {name} [{pid}] -> Cells: {orig_cells} (Version: {orig_ver})")
+            print(f"• Restoring {name} [{pid}] -> Target cells: {orig_cells}")
             if args.execute and client:
                 try:
-                    res = client.patch_teacher_scientometrics(fac, pid, orig_cells, orig_ver)
+                    # Fetch current live version to avoid stale OCC version conflict
+                    curr_ver = orig_ver
+                    try:
+                        live_t = client.get_teacher(fac, pid)
+                        live_vers = live_t.get("field_versions") or {}
+                        if live_vers.get("scientometrics") is not None:
+                            curr_ver = live_vers.get("scientometrics")
+                    except Exception:
+                        pass
+
+                    res = client.patch_teacher_scientometrics(
+                        faculty_id=fac,
+                        profile_id=pid,
+                        new_cells=orig_cells,
+                        expected_version=curr_ver,
+                        force_exact_cells=True
+                    )
                     print(f"  ✅ Restored successfully (New version: {res.get('version')})")
                     restored_count += 1
                 except Exception as e:
