@@ -37,14 +37,27 @@ credentials.json
 .DS_Store
 # Isolated external subprojects
 faculty-data/
-teacher_*.json
-teachers_*.json
-all_teachers_*.json
-test_sample_*.json
-enriched_*.json
-faculty_patches_*.json
+
+# Teacher Data, Exports, Batches & Summaries (any extension)
+teacher_*
+teachers_*
+all_teachers_*
+test_sample_*
+enriched_*
+faculty_patches_*
+*summary*
+sync_backup_*
+*audit_log*
 *.state.json
 .*state.json
 .matcher_state.json
-sync_backup_*.json
+
+# Temporary / Staging Directories
+temp/
+tmp/
+temp_data/
+data_archive/
+backups/
 *.tmp
+*.log
+
